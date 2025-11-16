@@ -49,8 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
         $holiday_dates = [
-        '2025-01-01' => 1.00, // Regular
-        '2025-01-29' => 0.30, // Special
+        '2025-01-01' => 1.00, // Regular - New Year
+        '2025-01-05' => 1.00, // Regular - Three Kings
+        '2025-01-29' => 0.30, // Special - Chinese New Year
         ];
 
 
@@ -68,7 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $processed_dates = [];
         $processed_holidays = [];
-        $dayBuckets = [];   
+        $dayBuckets = [];
+        $seen_rows = [];  // Track seen rows to skip duplicates
         
 
         while ($row = $result->fetch_assoc()) {
@@ -81,17 +83,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $short_misload_bonus_sil = $row['Short_Misload_Bonus_SIL'];
             $deductions = $row['Deductions'];
             $dept_row = $row['Business_Unit'] ?? '';
+            $shift_no = isset($row['Shift_No']) ? (int)$row['Shift_No'] : 0;
             $regular_hours_row = (stripos($dept_row, 'Canteen') !== false) ? 12 : 8;
             $ot_rate_row = $daily_rate / $regular_hours_row;
 
+            // Skip duplicate rows (same date, time_in, time_out, hours, remarks)
+            $row_key = $date . '|' . $row['Time_IN'] . '|' . $row['Time_OUT'] . '|' . $hours . '|' . $remarks;
+            if (in_array($row_key, $seen_rows)) {
+                continue;  // Skip this duplicate row
+            }
+            $seen_rows[] = $row_key;
+
+            // Skip rows with empty timestamps AND zero hours (completely empty data)
+            if (empty($row['Time_IN']) && empty($row['Time_OUT']) && $hours == 0) {
+                continue;
+            }
+
                 $is_ot = stripos($remarks, 'Overtime') !== false;
     if (!isset($dayBuckets[$date])) {
-        $dayBuckets[$date] = ['base' => 0, 'saw_any_row' => true];
+        $dayBuckets[$date] = ['base' => 0, 'saw_any_row' => true, 'has_regular_work' => false];
     } else {
         $dayBuckets[$date]['saw_any_row'] = true;
     }
-    // Only add to "base" for non-OT rows; OT-only dates will have base == 0 but still count as a day.
-    if (!$is_ot) {
+    // Track if this date has regular (non-OT) work
+    if (!$is_ot && $hours > 0) {
+        $dayBuckets[$date]['has_regular_work'] = true;
         $dayBuckets[$date]['base'] += $hours;
     }
 
@@ -101,21 +117,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $processed_dates[] = $date;
             }
 
+            // Check if this date is a holiday
+            $is_holiday = array_key_exists($date, $holiday_dates);
+            $holiday_multiplier = $is_holiday ? $holiday_dates[$date] : 0;
+
             if (stripos($remarks, 'Overtime') !== false) {
-                $total_overtime_hours += $hours;          // keep hours if you show them
-                $total_overtime_pay   += $hours * $ot_rate_row; // PAY per row
+                $total_overtime_hours += $hours;
+                $total_overtime_pay += $hours * $ot_rate_row;
             }
 
-
-            $night_start = strtotime('20:00');
-            $night_end = strtotime('07:00') + 86400;
-            if ($time_in >= $night_start && $time_out <= $night_end) {
+            // Night differential: 3rd shift only (Shift_No = 3)
+            if ($shift_no == 3) {
                 $total_night_diff += 52;
             }
 
-            if (!in_array($date, $processed_holidays) && array_key_exists($date, $holiday_dates)) {
-                $premium_rate = $holiday_dates[$date];
-                $total_holiday_premium += $daily_rate * $premium_rate;
+            // Holiday premium for regular (non-overtime) work
+            if (!in_array($date, $processed_holidays) && $is_holiday && !$is_ot) {
+                $total_holiday_premium += $daily_rate * $holiday_multiplier;
                 $processed_holidays[] = $date;
             }
 
@@ -142,7 +160,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (stripos($short_misload_bonus_sil, 'Bonus') !== false) {
-                $bonuses += 0; // Placeholder; adjust if you have specific bonus amounts
+                // Extract numeric value from deductions column if it contains a number
+                if (!empty($deductions) && is_numeric($deductions)) {
+                    $bonuses += (float)$deductions;
+                }
             }
         }
 
@@ -161,24 +182,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $govt_loan = 922.9;
         }
 
-        $total_night_diff += $total_sil_count * 52;
-
-        if ($start_date <= '2025-01-05' && $end_date >= '2025-01-05') {
-            $total_holiday_premium += $daily_rate * 1.00;
-        }
-
         $basic_pay = $total_days_worked * $daily_rate;
-        $overtime_pay = $total_overtime_hours * $overtime_rate;
+        $overtime_pay = $total_overtime_pay;
         $night_diff_pay = $total_night_diff;
         $holiday_pay = $total_holiday_premium;
         $sil_pay = $total_sil_count * $daily_rate;
         $cashier_pay = $total_cashier_bonus;
         $subtotal = $basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay + $sil_pay + $cashier_pay;
-        // if ($subtotal > 520) {
-        //    $total_allowance = 20;
-        // }
-        // $daily_rate should come from employees table (rate), not hard-coded.
-        $worked_days = count($processed_dates);   // or count($counted_dates) if you used that name
+        
+        // Calculate allowance based on days with regular (non-OT) work only
+        $regular_work_days = 0;
+        foreach ($dayBuckets as $d => $info) {
+            if ($info['has_regular_work']) {
+                $regular_work_days++;
+            }
+        }
+        $worked_days = $regular_work_days > 0 ? $regular_work_days : count($processed_dates);
 
         $total_allowance = ($daily_rate > 520) ? (20 * $worked_days) : 0;
 
