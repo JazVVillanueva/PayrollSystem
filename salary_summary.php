@@ -94,8 +94,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $seen_rows[] = $row_key;
 
-            // Skip rows with empty timestamps AND zero hours (completely empty data)
-            if (empty($row['Time_IN']) && empty($row['Time_OUT']) && $hours == 0) {
+            // Skip rows with empty timestamps AND zero hours (but NOT if they have SIL)
+            $has_sil_marker = stripos($short_misload_bonus_sil, 'SIL') !== false;
+            if (empty($row['Time_IN']) && empty($row['Time_OUT']) && $hours == 0 && !$has_sil_marker) {
                 continue;
             }
 
@@ -111,11 +112,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dayBuckets[$date]['base'] += $hours;
     }
 
-            $has_sil = stripos($short_misload_bonus_sil, 'SIL') !== false;
-            if (!$has_sil && !in_array($date, $processed_dates)) {
+            // Track days worked (including SIL days - they count in total days)
+            if (!in_array($date, $processed_dates)) {
                 $total_days_worked++;
                 $processed_dates[] = $date;
             }
+            
+            // Track SIL count separately
+            $has_sil = stripos($short_misload_bonus_sil, 'SIL') !== false;
 
             // Check if this date is a holiday
             $is_holiday = array_key_exists($date, $holiday_dates);
@@ -204,7 +208,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $worked_days = $regular_work_days > 0 ? $regular_work_days : count($processed_dates);
 
-        $total_allowance = ($daily_rate > 520) ? (20 * $worked_days) : 0;
+        // Calculate allowance: Cashiers get 20php per day worked, others get 20php per day if rate > 520
+        if ($total_cashier_hours > 0) {
+            // Cashier: 20php per day worked
+            $total_allowance = 20 * $worked_days;
+        } else {
+            // Non-cashier: 20php per day if rate > 520
+            $total_allowance = ($daily_rate > 520) ? (20 * $worked_days) : 0;
+        }
 
 
         $gross_income = $basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay
