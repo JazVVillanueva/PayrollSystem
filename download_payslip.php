@@ -133,118 +133,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
 
     $stmt->close();
 
-    // Generate PDF using FPDF
-    require('fpdf.php');
-    
-    // Create PDF with explicit settings
-    $pdf = new FPDF('P', 'mm', 'A4');
-    $pdf->SetAutoPageBreak(true, 15);
-    $pdf->AddPage();
-    
-    // Header
-    $pdf->SetFont('Arial', 'B', 20);
-    $pdf->Cell(0, 15, 'PAYSLIP', 0, 1, 'C');
-    $pdf->Ln(5);
-    
-    // Employee and Date Info
-    $pdf->SetFont('Arial', 'B', 12);
-    $pdf->Cell(0, 8, 'Employee: ' . $selected_employee, 0, 1);
-    $pdf->SetFont('Arial', '', 11);
-    $pdf->Cell(0, 7, 'Period: ' . date('M d, Y', strtotime($start_date)) . ' to ' . date('M d, Y', strtotime($end_date)), 0, 1);
-    $pdf->Ln(5);
-    
-    // Earnings Section
-    $pdf->SetFillColor(102, 126, 234);
-    $pdf->SetTextColor(255, 255, 255);
-    $pdf->SetFont('Arial', 'B', 12);
-    $pdf->Cell(0, 10, 'EARNINGS', 0, 1, 'L', true);
-    
-    $pdf->SetTextColor(0, 0, 0);
-    $pdf->SetFont('Arial', '', 10);
-    $pdf->SetFillColor(247, 250, 252);
-    
-    // Earnings rows
-    $earnings = [
-        ['Total Days of Work', $total_days_worked . ' days'],
-        ['Daily Rate', 'PHP ' . number_format($daily_rate, 2)],
-        ['Basic Pay', 'PHP ' . number_format($basic_pay, 2)],
-        ['Overtime Hours', $total_overtime_hours . ' hrs'],
-        ['Overtime Rate', 'PHP ' . number_format($overtime_rate, 2) . '/hr'],
-        ['Overtime Pay', 'PHP ' . number_format($overtime_pay, 2)],
-        ['Night Differential', 'PHP ' . number_format($night_diff_pay, 2)],
-        ['Holiday Premium', 'PHP ' . number_format($holiday_pay, 2)],
-        ['SIL Pay', 'PHP ' . number_format($sil_pay, 2)],
-        ['Cashier Bonus', 'PHP ' . number_format($cashier_pay, 2)],
-        ['Allowance', 'PHP ' . number_format($total_allowance, 2)]
-    ];
-    
-    $fill = false;
-    foreach ($earnings as $item) {
-        $pdf->Cell(120, 8, '  ' . $item[0], 0, 0, 'L', $fill);
-        $pdf->Cell(70, 8, $item[1], 0, 1, 'R', $fill);
-        $fill = !$fill;
-    }
-    
-    // Gross Income
-    $pdf->SetFont('Arial', 'B', 11);
-    $pdf->SetFillColor(230, 240, 255);
-    $pdf->Cell(120, 10, '  GROSS INCOME', 0, 0, 'L', true);
-    $pdf->Cell(70, 10, 'PHP ' . number_format($gross_income, 2), 0, 1, 'R', true);
-    $pdf->Ln(5);
-    
-    // Deductions Section
-    $pdf->SetFillColor(220, 53, 69);
-    $pdf->SetTextColor(255, 255, 255);
-    $pdf->SetFont('Arial', 'B', 12);
-    $pdf->Cell(0, 10, 'DEDUCTIONS', 0, 1, 'L', true);
-    
-    $pdf->SetTextColor(0, 0, 0);
-    $pdf->SetFont('Arial', '', 10);
-    $pdf->SetFillColor(247, 250, 252);
-    
-    // Deductions rows
-    $deductions = [
-        ['SSS', 'PHP ' . number_format($sss, 2)],
-        ['PhilHealth (PHIC)', 'PHP ' . number_format($phic, 2)],
-        ['Pag-IBIG (HDMF)', 'PHP ' . number_format($hdmf, 2)],
-        ['Government Loan', 'PHP ' . number_format($govt_loan, 2)],
-        ['Late/Absent', 'PHP ' . number_format($late_absent, 2)],
-        ['Misload/Shortage', 'PHP ' . number_format($misload_shortage, 2)],
-        ['Uniform/CA', 'PHP ' . number_format($uniform_ca, 2)]
-    ];
-    
-    $fill = false;
-    foreach ($deductions as $item) {
-        $pdf->Cell(120, 8, '  ' . $item[0], 0, 0, 'L', $fill);
-        $pdf->Cell(70, 8, $item[1], 0, 1, 'R', $fill);
-        $fill = !$fill;
-    }
-    
-    // Total Deductions
-    $pdf->SetFont('Arial', 'B', 11);
-    $pdf->SetFillColor(255, 230, 230);
-    $pdf->Cell(120, 10, '  TOTAL DEDUCTIONS', 0, 0, 'L', true);
-    $pdf->Cell(70, 10, 'PHP ' . number_format($total_deductions, 2), 0, 1, 'R', true);
-    $pdf->Ln(5);
-    
-    // Net Income (Final)
-    $pdf->SetFillColor(72, 187, 120);
-    $pdf->SetTextColor(255, 255, 255);
-    $pdf->SetFont('Arial', 'B', 14);
-    $pdf->Cell(120, 12, '  NET INCOME', 0, 0, 'L', true);
-    $pdf->Cell(70, 12, 'PHP ' . number_format($net_income, 2), 0, 1, 'R', true);
-    
-    // Footer
-    $pdf->Ln(10);
-    $pdf->SetTextColor(128, 128, 128);
-    $pdf->SetFont('Arial', 'I', 9);
-    $pdf->Cell(0, 5, 'Generated on ' . date('F d, Y h:i A'), 0, 1, 'C');
-    $pdf->Cell(0, 5, 'This is a system-generated document.', 0, 1, 'C');
-    
-    // Output PDF
-    $pdf_file_name = 'Payslip_' . str_replace([',', ' '], ['', '_'], $selected_employee) . '_' . date('Ymd') . '.pdf';
-    $pdf->Output('D', $pdf_file_name);
-    exit;
+    // Generate CSV content
+    $csv_content = "Payslip for $selected_employee ($start_date to $end_date)\n";
+    $csv_content .= "Item,Value\n";
+    $csv_content .= "Total Days of Work,$total_days_worked\n";
+    $csv_content .= "Rate (per day),$daily_rate PHP\n";
+    $csv_content .= "Hrs of Overtime,$total_overtime_hours\n";
+    $csv_content .= "Rate (per overtime hour),$overtime_rate PHP\n";
+    $csv_content .= "Allowance,$total_allowance PHP\n";
+    $csv_content .= "Night Diff.,$night_diff_pay PHP\n";
+    $csv_content .= "Holiday,$holiday_pay PHP\n";
+    $csv_content .= "SIL,$sil_pay PHP\n";
+    $csv_content .= "GROSS Income," . number_format($gross_income, 2) . " PHP\n";
+    $csv_content .= "SSS," . number_format($sss, 2) . " PHP\n";
+    $csv_content .= "PHIC," . number_format($phic, 2) . " PHP\n";
+    $csv_content .= "HDMF," . number_format($hdmf, 2) . " PHP\n";
+    $csv_content .= "Govt. Loan," . number_format($govt_loan, 2) . " PHP\n";
+    $csv_content .= "Late/Absent," . number_format($late_absent, 2) . " PHP\n";
+    $csv_content .= "Misload/Shortage," . number_format($misload_shortage, 2) . " PHP\n";
+    $csv_content .= "Uniform/CA," . number_format($uniform_ca, 2) . " PHP\n";
+    $csv_content .= "Total Deductions," . number_format($total_deductions, 2) . " PHP\n";
+    $csv_content .= "Net Income," . number_format($net_income, 2) . " PHP\n";
+
+    // Suppress warnings and force CSV download
+    error_reporting(0); // Suppress warnings to avoid header issues
+    $csv_file_name = 'payslip_' . str_replace(' ', '_', $selected_employee) . '.csv';
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="' . $csv_file_name . '"');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    echo $csv_content;
+    exit; // Stop further execution to force download
+
+    // Success message (won't show due to exit, but can be added if needed)
+    $message = 'Payslip CSV downloaded successfully!';
 }
 
 $conn->close();
@@ -255,156 +178,51 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Download Payslip PDF</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <title>Download Payslip</title>
+    <link rel="stylesheet" href="style.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 2rem;
-        }
-        .container { max-width: 800px; margin: 0 auto; }
-        .header {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-        h1 { 
-            color: #1a202c;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-        .subtitle { color: #718096; font-size: 0.95rem; }
-        .form-card {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-        form { display: flex; gap: 1rem; flex-direction: column; }
-        .form-group { margin-bottom: 1rem; }
-        label { 
-            display: block;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-        select, input { 
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s;
-            font-family: 'Inter', sans-serif;
-        }
-        select:focus, input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        button { 
-            padding: 0.75rem 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-        .message { 
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 1.5rem;
-            font-weight: 500;
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .error { 
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .back-button { text-align: center; }
-        .back-button button {
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-        }
-        .back-button button:hover {
-            background: #667eea;
-            color: white;
-        }
-        .icon { margin-right: 0.5rem; }
-        @media (max-width: 768px) {
-            body { padding: 1rem; }
-            h1 { font-size: 1.5rem; }
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        form { margin-bottom: 20px; }
+        select, input { padding: 8px; margin: 5px; }
+        button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .message { margin-top: 20px; padding: 10px; background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .back-button { margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-file-pdf icon"></i>Download Payslip PDF</h1>
-            <p class="subtitle">Generate and download individual payslip in PDF format</p>
-        </div>
+    <h1>Download Payslip</h1>
+    <form method="POST">
+        <label for="start_date">Start Date:</label>
+        <input type="date" id="start_date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>" required>
+        
+        <label for="end_date">End Date:</label>
+        <input type="date" id="end_date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>" required>
+        
+        <label for="employee">Select Employee:</label>
+        <select id="employee" name="employee" required>
+            <option value="">-- Select Employee --</option>
+            <?php
+            include 'db_connect.php';
+            $employee_query = $conn->query("SELECT DISTINCT Name FROM timesheet ORDER BY Name ASC");
+            while ($row = $employee_query->fetch_assoc()) {
+                echo '<option value="' . htmlspecialchars($row['Name']) . '">' . htmlspecialchars($row['Name']) . '</option>';
+            }
+            $conn->close();
+            ?>
+        </select>
+        
+        <button type="submit">Download Payslip</button>
+    </form>
 
-        <div class="form-card">
-            <form method="POST">
-                <div class="form-group">
-                    <label><i class="far fa-calendar-alt icon"></i>Start Date</label>
-                    <input type="date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>" required>
-                </div>
-                
-                <div class="form-group">
-                    <label><i class="far fa-calendar-check icon"></i>End Date</label>
-                    <input type="date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>" required>
-                </div>
-                
-                <div class="form-group">
-                    <label><i class="fas fa-user icon"></i>Select Employee</label>
-                    <select name="employee" required>
-                        <option value="">-- Select Employee --</option>
-                        <?php
-                        include 'db_connect.php';
-                        $employee_query = $conn->query("SELECT DISTINCT Name FROM timesheet ORDER BY Name ASC");
-                        while ($row = $employee_query->fetch_assoc()) {
-                            echo '<option value="' . htmlspecialchars($row['Name']) . '">' . htmlspecialchars($row['Name']) . '</option>';
-                        }
-                        $conn->close();
-                        ?>
-                    </select>
-                </div>
-                
-                <button type="submit"><i class="fas fa-file-pdf icon"></i>Download PDF</button>
-            </form>
+    <?php if ($message): ?>
+        <div class="message">
+            <?php echo htmlspecialchars($message); ?>
         </div>
+    <?php endif; ?>
 
-        <?php if ($message): ?>
-            <div class="message">
-                <i class="fas fa-check-circle icon"></i><?php echo htmlspecialchars($message); ?>
-            </div>
-        <?php endif; ?>
-
-        <div class="back-button">
-            <button onclick="location.href='index.php'"><i class="fas fa-arrow-left icon"></i>Back to Dashboard</button>
-        </div>
+    <div class="back-button">
+        <button onclick="location.href='index.php'">Back to Dashboard</button>
     </div>
 </body>
 </html>

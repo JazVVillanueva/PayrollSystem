@@ -204,185 +204,43 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Individual Payslip Details</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 2rem;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-        h1 { 
-            color: #1a202c;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-        .subtitle { color: #718096; font-size: 0.95rem; }
-        .form-card {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-        form { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
-        .form-group { flex: 1; min-width: 200px; }
-        label { 
-            display: block;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-        select, input { 
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s;
-            font-family: 'Inter', sans-serif;
-        }
-        select:focus, input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        button { 
-            padding: 0.75rem 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-        .payslip-breakdown {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-            animation: slideUp 0.5s ease-out;
-        }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .payslip-breakdown h2 {
-            color: #1a202c;
-            font-size: 1.3rem;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #f7fafc;
-        }
-        .payslip-breakdown table { 
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        .payslip-breakdown th, .payslip-breakdown td { 
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .payslip-breakdown th { 
-            background: #f7fafc;
-            color: #2d3748;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        .payslip-breakdown tbody tr:hover { background: #f7fafc; }
-        .payslip-breakdown tbody tr:last-child td { border-bottom: none; }
-        .payslip-breakdown tr th:first-child { border-top-left-radius: 10px; }
-        .payslip-breakdown tr th:last-child { border-top-right-radius: 10px; }
-        .back-button { text-align: center; }
-        .back-button button {
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-        }
-        .back-button button:hover {
-            background: #667eea;
-            color: white;
-        }
-        .debug {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-        .debug h3 {
-            color: #1a202c;
-            font-size: 1.2rem;
-            margin-bottom: 1rem;
-        }
-        .icon { margin-right: 0.5rem; }
-        @media (max-width: 768px) {
-            body { padding: 1rem; }
-            h1 { font-size: 1.5rem; }
-            form { flex-direction: column; }
-            .form-group { width: 100%; }
-            button { width: 100%; }
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        form { margin-bottom: 20px; }
+        select, input { padding: 8px; margin: 5px; }
+        button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .payslip-breakdown { margin-top: 20px; }
+        .payslip-breakdown table { width: 100%; border-collapse: collapse; }
+        .payslip-breakdown th, .payslip-breakdown td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .payslip-breakdown th { background-color: #f2f2f2; }
+        .back-button { margin-top: 20px; } /* Style for the back button */
+        .debug { margin-top: 20px; padding: 10px; background: #f9f9f9; border: 1px solid #ccc; } /* Style for debug section */
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-file-invoice-dollar icon"></i>Generate Individual Payslip</h1>
-            <p class="subtitle">View detailed payslip breakdown for any employee</p>
-        </div>
-
-        <div class="form-card">
-            <form method="POST">
-                <div class="form-group">
-                    <label><i class="far fa-calendar-alt icon"></i>Start Date</label>
-                    <input type="date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>" required>
-                </div>
-                
-                <div class="form-group">
-                    <label><i class="far fa-calendar-check icon"></i>End Date</label>
-                    <input type="date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>" required>
-                </div>
-                
-                <div class="form-group">
-                    <label><i class="fas fa-user icon"></i>Select Employee</label>
-                    <select name="employee" required>
-                        <option value="">-- Select Employee --</option>
-                        <?php foreach ($employees as $emp): ?>
-                            <option value="<?php echo htmlspecialchars($emp); ?>" <?php if ($emp === $selected_employee) echo 'selected'; ?>><?php echo htmlspecialchars($emp); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
-                <button type="submit"><i class="fas fa-calculator icon"></i>Generate Payslip</button>
-            </form>
-        </div>
+    <h1>Generate Individual Payslip</h1>
+    <form method="POST">
+        <label for="start_date">Start Date:</label>
+        <input type="date" id="start_date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>" required>
+        
+        <label for="end_date">End Date:</label>
+        <input type="date" id="end_date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>" required>
+        
+        <label for="employee">Select Employee:</label>
+        <select id="employee" name="employee" required>
+            <option value="">-- Select Employee --</option>
+            <?php foreach ($employees as $emp): ?>
+                <option value="<?php echo htmlspecialchars($emp); ?>" <?php if ($emp === $selected_employee) echo 'selected'; ?>><?php echo htmlspecialchars($emp); ?></option>
+            <?php endforeach; ?>
+        </select>
+        
+        <button type="submit">Generate Payslip</button>
+    </form>
 
     <?php if ($payslip_data): ?>
         <div class="payslip-breakdown">
-            <h2><i class="fas fa-user-tie icon"></i>Payslip for <?php echo htmlspecialchars($payslip_data['employee']); ?></h2>
-            <p style="color: #718096; margin-bottom: 1.5rem;"><i class="far fa-calendar icon"></i><?php echo htmlspecialchars($start_date); ?> to <?php echo htmlspecialchars($end_date); ?></p>
+            <h2>Payslip Breakdown for <?php echo htmlspecialchars($payslip_data['employee']); ?> (<?php echo htmlspecialchars($start_date); ?> to <?php echo htmlspecialchars($end_date); ?>)</h2>
             <table>
                 <tr><th style="color: black; font-weight: bold;">Item</th><th style="color: black; font-weight: bold;">Value</th></tr>
                 <tr><td>Total Days of Work</td><td><?php echo $payslip_data['total_days_worked']; ?></td></tr>
@@ -399,7 +257,7 @@ $conn->close();
 
         <!-- Deductions and Net Income Table -->
         <div class="payslip-breakdown">
-            <h2><i class="fas fa-calculator icon"></i>Deductions and Net Income</h2>
+            <h2>Deductions and Net Income for <?php echo htmlspecialchars($payslip_data['employee']); ?></h2>
             <table>
                 <tr><th style="color: black; font-weight: bold;">Item</th><th style="color: black; font-weight: bold;">Value</th></tr>
                 <tr><td>SSS</td><td><?php echo number_format($payslip_data['sss'], 2); ?> PHP</td></tr>
@@ -416,7 +274,7 @@ $conn->close();
 
         <!-- Debug Section -->
         <div class="debug">
-            <h3><i class="fas fa-bug icon"></i>Debug: Processed Holidays</h3>
+            <h3>Debug: Processed Holidays</h3>
             <?php if (empty($debug_holidays)): ?>
                 <p>No holidays processed for this employee in the selected date range.</p>
             <?php else: ?>
@@ -429,9 +287,8 @@ $conn->close();
         </div>
 		    <?php endif; ?>
 
-        <div class="back-button">
-            <button onclick="location.href='index.php'"><i class="fas fa-arrow-left icon"></i>Back to Dashboard</button>
-        </div>
+    <div class="back-button">
+        <button onclick="location.href='index.php'">Back to Dashboard</button>
     </div>
 </body>
 </html>
