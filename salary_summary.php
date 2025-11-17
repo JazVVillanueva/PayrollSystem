@@ -41,15 +41,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $total_holiday_premium = 0;
         $total_sil_count = 0;
         $total_allowance = 0;
-        $total_cashier_bonus = 0;
+        $total_cashier_hours = 0;
         $total_overtime_pay = 0.0;
-        $daily_rate = $empRate[$employee] ?? 520; // Use employee-specific rate from database
-        $overtime_rate = 65; // Fixed overtime rate
+        $daily_rate    = $empRate[$employee] ?? 520.0;   // fallback 520 if missing
+        $regular_hours = 8;
+        $overtime_rate = $daily_rate / $regular_hours; // kept for compatibility; we won't use it later
 
 
         $holiday_dates = [
-            '2025-01-06' => 1.00, // Three Kings Day: Regular Holiday (+100%)
-            '2025-01-29' => 0.30  // Chinese New Year: Special Non-Working (+30%)
+            '2025-01-01' => 1.00, // Regular - New Year
+            '2025-01-06' => 1.00, // Regular - Three Kings
+            '2025-01-29' => 0.30, // Special - Chinese New Year
         ];
 
 
@@ -69,8 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $processed_holidays = [];
         $dayBuckets = [];
         $seen_rows = [];  // Track seen rows to skip duplicates
-        $daily_earnings = []; // Track earnings per date: [date => ['basic'=>, 'ot'=>, 'night'=>, 'holiday'=>, 'cashier'=>]]
-        
+
 
         while ($row = $result->fetch_assoc()) {
             $date = $row['Date'];
@@ -83,11 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $deductions = $row['Deductions'];
             $dept_row = $row['Business_Unit'] ?? '';
             $shift_no = isset($row['Shift_No']) ? (int)$row['Shift_No'] : 0;
-            
-            // Initialize daily earnings tracker for this date
-            if (!isset($daily_earnings[$date])) {
-                $daily_earnings[$date] = ['basic' => 0, 'ot' => 0, 'night' => 0, 'holiday' => 0, 'cashier' => 0];
-            }
+            $regular_hours_row = (stripos($dept_row, 'Canteen') !== false) ? 12 : 8;
+            $ot_rate_row = $daily_rate / $regular_hours_row;
 
             // Skip duplicate rows (same date, time_in, time_out, hours, remarks)
             $row_key = $date . '|' . $row['Time_IN'] . '|' . $row['Time_OUT'] . '|' . $hours . '|' . $remarks;
@@ -113,13 +111,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dayBuckets[$date]['base'] += $hours;
     }
 
-            // Track days worked (SIL days are NOT counted in days_worked, they get SIL pay instead)
             $has_sil = stripos($short_misload_bonus_sil, 'SIL') !== false;
             if (!$has_sil && !in_array($date, $processed_dates)) {
                 $total_days_worked++;
                 $processed_dates[] = $date;
-                // Track basic pay for this day
-                $daily_earnings[$date]['basic'] = $daily_rate;
             }
 
             // Check if this date is a holiday
@@ -128,37 +123,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (stripos($remarks, 'Overtime') !== false) {
                 $total_overtime_hours += $hours;
-                // Calculate OT rate based on employee's daily rate: daily_rate / 8
-                $ot_rate = $daily_rate / 8;
-                $ot_pay_this_row = $hours * $ot_rate;
-                $total_overtime_pay += $ot_pay_this_row;
-                // Track OT pay for this day
-                $daily_earnings[$date]['ot'] += $ot_pay_this_row;
+                $total_overtime_pay += $hours * $ot_rate_row;
             }
 
-            // Night Differential: Count occurrences where shift is within 20:00 - 7:00, multiply by 52
-            $night_start = strtotime('20:00');
-            $night_end = strtotime('07:00') + 86400; // Next day
-            if ($time_in >= $night_start && $time_out <= $night_end) {
-                $total_night_diff += 52; // Add 52 per occurrence
-                $daily_earnings[$date]['night'] += 52;
+            // Night differential: 3rd shift only (Shift_No = 3)
+            if ($shift_no == 3) {
+                $total_night_diff += 52;
             }
 
-            // Holiday premium: Add only once per unique holiday date (for worked holidays)
-            if (!in_array($date, $processed_holidays) && $is_holiday) {
-                $holiday_premium = $daily_rate * $holiday_multiplier;
-                $total_holiday_premium += $holiday_premium;
+            // Holiday premium for regular (non-overtime) work
+            if (!in_array($date, $processed_holidays) && $is_holiday && !$is_ot) {
+                $total_holiday_premium += $daily_rate * $holiday_multiplier;
                 $processed_holidays[] = $date;
-                $daily_earnings[$date]['holiday'] += $holiday_premium;
             }
 
             $total_sil_count += substr_count($short_misload_bonus_sil, 'SIL');
 
-            // Cashier Bonus: 40php per 8hrs if Role is Cashier
+
             if ($role === 'Cashier') {
-                $cashier_bonus_this_row = 40 * floor($hours / 8);
-                $total_cashier_bonus += $cashier_bonus_this_row;
-                $daily_earnings[$date]['cashier'] += $cashier_bonus_this_row;
+                $total_cashier_hours += $hours;
             }
 
             if (stripos($remarks, 'Late') !== false) {
@@ -182,19 +165,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (stripos($short_misload_bonus_sil, 'Bonus') !== false) {
-                // Bonuses: "Bonus" in Short/Misload/Bonus/SIL (add to NET income)
-                $bonuses += 0; // Adjust if you have specific bonus amounts
+                // Extract numeric value from deductions column if it contains a number
+                if (!empty($deductions) && is_numeric($deductions)) {
+                    $bonuses += (float)$deductions;
+                }
             }
         }
 
-        // Add SIL to night differential: Each SIL counts as 52 PHP night diff
-        $total_night_diff += $total_sil_count * 52;
-
-        // Standard Deductions (if not exempt)
-        if (!in_array($employee, $exempt_employees)) {
-            $sss = 562.5;
-            $phic = 312.5;
-            $hdmf = 200;
+        $emp_ded = $conn->query("SELECT sss, phic, hdmf, govt FROM employees WHERE name = '$employee'");
+        if ($emp_ded && $d = $emp_ded->fetch_assoc()) {
+            $sss = (float)$d['sss'];
+            $phic = (float)$d['phic'];
+            $hdmf = (float)$d['hdmf'];
+            $govt_loan = (float)$d['govt'];
         }
 
 
@@ -209,23 +192,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $night_diff_pay = $total_night_diff;
         $holiday_pay = $total_holiday_premium;
         $sil_pay = $total_sil_count * $daily_rate;
-        $cashier_pay = $total_cashier_bonus;
+        $cashier_pay = floor($total_cashier_hours / 8) * 40;
         $subtotal = $basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay + $sil_pay + $cashier_pay;
-        
-        // Allowance: 20php per day where employee earned more than 520php
-        $allowance_days = 0;
-        foreach ($daily_earnings as $date => $earnings) {
-            $day_total = $earnings['basic'] + $earnings['ot'] + $earnings['night'] + $earnings['holiday'] + $earnings['cashier'];
-            if ($day_total > 520) {
-                $allowance_days++;
+
+        // Calculate allowance based on days with regular (non-OT) work only
+        $regular_work_days = 0;
+        foreach ($dayBuckets as $d => $info) {
+            if ($info['has_regular_work']) {
+                $regular_work_days++;
             }
         }
-        $total_allowance = $allowance_days * 20;
-        
-        // Special case: Murdock, Matthew gets 80 allowance (manually set from Excel)
-        if ($employee === 'Murdock, Matthew' || $employee === 'Murdock, Mathew') {
-            $total_allowance = 80;
-        }
+        $worked_days = $regular_work_days > 0 ? $regular_work_days : count($processed_dates);
+
+        $total_allowance = ($daily_rate > 520) ? (20 * $worked_days) : 0;
 
 
         $gross_income = $basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay
