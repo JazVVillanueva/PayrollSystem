@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $processed_holidays = [];
         $dayBuckets = [];
         $seen_rows = [];  // Track seen rows to skip duplicates
-        $daily_earnings_tracker = []; // Track all earnings per date: [date => ['basic'=>, 'ot'=>, 'night'=>, etc]]
+        $daily_earnings = []; // Track total earnings per date to calculate allowance: [date => total_earnings]
         
 
         while ($row = $result->fetch_assoc()) {
@@ -86,6 +86,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Initialize daily earnings tracker for this date
             if (!isset($daily_earnings[$date])) {
                 $daily_earnings[$date] = 0;
+            }
+
+            // Initialize daily earnings tracker for this date
+            if (!isset($daily_earnings[$date])) {
+                $daily_earnings[$date] = ['basic' => 0, 'ot' => 0, 'night' => 0, 'holiday' => 0, 'cashier' => 0];
             }
 
             // Skip duplicate rows (same date, time_in, time_out, hours, remarks)
@@ -116,6 +121,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$has_sil && !in_array($date, $processed_dates)) {
                 $total_days_worked++;
                 $processed_dates[] = $date;
+                // Track basic pay for this day
+                $daily_earnings[$date]['basic'] = $daily_rate;
             }
 
             // Check if this date is a holiday
@@ -126,7 +133,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $total_overtime_hours += $hours;
                 // Calculate OT rate based on employee's daily rate: daily_rate / 8
                 $ot_rate = $daily_rate / 8;
-                $total_overtime_pay += $hours * $ot_rate;
+                $ot_pay_this_row = $hours * $ot_rate;
+                $total_overtime_pay += $ot_pay_this_row;
+                // Track OT pay for this day
+                $daily_earnings[$date]['ot'] += $ot_pay_this_row;
             }
 
             // Night Differential: Count occurrences where shift is within 20:00 - 7:00, multiply by 52
@@ -134,19 +144,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $night_end = strtotime('07:00') + 86400; // Next day
             if ($time_in >= $night_start && $time_out <= $night_end) {
                 $total_night_diff += 52; // Add 52 per occurrence
+                $daily_earnings[$date]['night'] += 52;
             }
 
             // Holiday premium: Add only once per unique holiday date (for worked holidays)
             if (!in_array($date, $processed_holidays) && $is_holiday) {
-                $total_holiday_premium += $daily_rate * $holiday_multiplier;
+                $holiday_premium = $daily_rate * $holiday_multiplier;
+                $total_holiday_premium += $holiday_premium;
                 $processed_holidays[] = $date;
+                $daily_earnings[$date]['holiday'] += $holiday_premium;
             }
 
             $total_sil_count += substr_count($short_misload_bonus_sil, 'SIL');
 
             // Cashier Bonus: 40php per 8hrs if Role is Cashier
             if ($role === 'Cashier') {
-                $total_cashier_bonus += 40 * floor($hours / 8);
+                $cashier_bonus_this_row = 40 * floor($hours / 8);
+                $total_cashier_bonus += $cashier_bonus_this_row;
+                $daily_earnings[$date]['cashier'] += $cashier_bonus_this_row;
             }
 
             if (stripos($remarks, 'Late') !== false) {
@@ -205,10 +220,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cashier_pay = $total_cashier_bonus;
         $subtotal = $basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay + $sil_pay + $cashier_pay;
         
-        // Allowance: 20php per day where employee's rate > 520 (employees earning more than 520PhP per day)
-        if ($daily_rate > 520) {
-            $total_allowance = 20 * $total_days_worked;
+        // Allowance: 20php per day where employee earned more than 520php
+        $allowance_days = 0;
+        foreach ($daily_earnings as $date => $earnings) {
+            $day_total = $earnings['basic'] + $earnings['ot'] + $earnings['night'] + $earnings['holiday'] + $earnings['cashier'];
+            if ($day_total > 520) {
+                $allowance_days++;
+            }
         }
+        $total_allowance = $allowance_days * 20;
         
         // Special case: Murdock, Matthew gets 80 allowance (manually set from Excel)
         if ($employee === 'Murdock, Matthew' || $employee === 'Murdock, Mathew') {
