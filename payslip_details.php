@@ -51,10 +51,125 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
     // Use Excel value for net income (matches salary_summary.php logic)
     $net_income = isset($excel_values[$selected_employee]) ? $excel_values[$selected_employee] : 0;
 
+    // Query to get actual work details from timesheet
+    $stmt = $conn->prepare("SELECT * FROM timesheet WHERE Name = ? AND Date BETWEEN ? AND ? ORDER BY Date ASC");
+    $stmt->bind_param("sss", $selected_employee, $start_date, $end_date);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    // Calculate work details for display
+    $total_days_worked = 0;
+    $total_overtime_hours = 0;
+    $total_night_diff_count = 0;
+    $total_sil_count = 0;
+    $total_cashier_hours = 0;
+    $daily_rate = 520;
+    $overtime_rate = 65;
+    
+    // Deduction tracking
+    $late_count = 0;
+    $has_govt_loan = false;
+    
+    $processed_dates = [];
+    
+    while ($row = $result->fetch_assoc()) {
+        $date = $row['Date'];
+        $time_in = strtotime($row['Time_IN']);
+        $time_out = strtotime($row['Time_OUT']);
+        $hours = (float)$row['Hours'];
+        $role = $row['Role'];
+        $remarks = $row['Remarks'];
+        $short_misload_bonus_sil = $row['Short_Misload_Bonus_SIL'];
+        
+        // Count unique days worked
+        $has_sil = stripos($short_misload_bonus_sil, 'SIL') !== false;
+        if (!$has_sil && !in_array($date, $processed_dates)) {
+            $total_days_worked++;
+            $processed_dates[] = $date;
+        }
+        
+        // Overtime hours
+        if (stripos($remarks, 'Overtime') !== false) {
+            $total_overtime_hours += $hours;
+        }
+        
+        // Night differential count
+        $night_start = strtotime('20:00');
+        $night_end = strtotime('07:00') + 86400;
+        if ($time_in >= $night_start && $time_out <= $night_end) {
+            $total_night_diff_count++;
+        }
+        
+        // SIL count
+        $total_sil_count += substr_count($short_misload_bonus_sil, 'SIL');
+        
+        // Cashier hours
+        if ($role === 'Cashier') {
+            $total_cashier_hours += $hours;
+        }
+        
+        // Late count
+        if (stripos($remarks, 'Late') !== false) {
+            $late_count++;
+        }
+    }
+    
+    // Calculate breakdown (for display purposes - actual net income is from Excel)
+    $basic_pay = $total_days_worked * $daily_rate;
+    $overtime_pay = $total_overtime_hours * $overtime_rate;
+    $night_diff_pay = ($total_night_diff_count + $total_sil_count) * 52;
+    $holiday_pay = 0;
+    if ($start_date <= '2025-01-05' && $end_date >= '2025-01-05') {
+        $holiday_pay += 520; // Three Kings Day
+    }
+    if ($start_date <= '2025-01-29' && $end_date >= '2025-01-29') {
+        $holiday_pay += 156; // Chinese New Year (30%)
+    }
+    $sil_pay = $total_sil_count * $daily_rate;
+    $cashier_bonus = floor($total_cashier_hours / 8) * 40;
+    $allowance = ($basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay + $sil_pay + $cashier_bonus) > 520 ? 20 : 0;
+    
+    $gross_income = $basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay + $sil_pay + $cashier_bonus + $allowance;
+    
+    // Standard deductions
+    $exempt_employees = ['Richards, Sue', 'Grimm, Ben', 'Hammond, Jim', 'Barnes, James', 'Murdock, Matthew', 'Allen, Barry', 'Curry, Arthur'];
+    $sss = in_array($selected_employee, $exempt_employees) ? 0 : 562.5;
+    $phic = in_array($selected_employee, $exempt_employees) ? 0 : 312.5;
+    $hdmf = in_array($selected_employee, $exempt_employees) ? 0 : 200;
+    
+    // Govt loan
+    $govt_loan = 0;
+    if ($selected_employee === 'Wayne, Bruce') {
+        $govt_loan = 461.25;
+    } elseif ($selected_employee === 'Parker, Peter') {
+        $govt_loan = 922.9;
+    }
+    
+    $late_deduction = $late_count * 150;
+    $total_deductions = $sss + $phic + $hdmf + $govt_loan + $late_deduction;
+
     $payslip_data = [
         'employee' => $selected_employee,
+        'days_worked' => $total_days_worked,
+        'basic_pay' => $basic_pay,
+        'overtime_hours' => $total_overtime_hours,
+        'overtime_pay' => $overtime_pay,
+        'night_diff_pay' => $night_diff_pay,
+        'holiday_pay' => $holiday_pay,
+        'sil_pay' => $sil_pay,
+        'cashier_bonus' => $cashier_bonus,
+        'allowance' => $allowance,
+        'gross_income' => $gross_income,
+        'sss' => $sss,
+        'phic' => $phic,
+        'hdmf' => $hdmf,
+        'govt_loan' => $govt_loan,
+        'late_deduction' => $late_deduction,
+        'total_deductions' => $total_deductions,
         'net_income' => $net_income
     ];
+    
+    $stmt->close();
 }
 
 $conn->close();
@@ -219,32 +334,124 @@ $conn->close();
             color: #6c757d;
             font-size: 1rem;
             font-weight: 500;
-            margin-top: 5px;
+            margin-bottom: 20px;
         }
 
-        .net-income-display {
+        .payslip-section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .payslip-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .payslip-table tr {
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .payslip-table tr:last-child {
+            border-bottom: none;
+        }
+
+        .payslip-table td {
+            padding: 12px 8px;
+            font-size: 0.95rem;
+        }
+
+        .payslip-table td:first-child {
+            color: #6c757d;
+            width: 60%;
+        }
+
+        .payslip-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .total-row td {
+            font-weight: 700 !important;
+            font-size: 1.1rem !important;
+            padding-top: 15px !important;
+            color: #667eea !important;
+        }
+
+        .net-income-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 30px;
             border-radius: 15px;
             text-align: center;
-            margin-top: 20px;
+            margin-top: 25px;
         }
 
-        .net-income-display .label {
+        .net-income-card .label {
             font-size: 1.2rem;
             opacity: 0.9;
             margin-bottom: 10px;
+            font-weight: 500;
         }
 
-        .net-income-display .amount {
-            font-size: 3rem;
+        .net-income-card .amount {
+            font-size: 2.5rem;
             font-weight: 700;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .info-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-item .label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .info-item .value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #212529;
         }
 
         .back-button-container {
             margin-top: 30px;
             text-align: center;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .form-section, .back-button-container {
+                display: none;
+            }
+            .container {
+                box-shadow: none;
+            }
         }
 
         @media (max-width: 768px) {
@@ -260,8 +467,12 @@ $conn->close();
                 padding: 20px;
             }
 
-            .net-income-display .amount {
+            .net-income-card .amount {
                 font-size: 2rem;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -307,16 +518,138 @@ $conn->close();
             <?php if ($payslip_data): ?>
                 <div class="payslip-card">
                     <h2>
-                        <i class="fas fa-user-circle"></i> 
+                        <i class="fas fa-file-invoice-dollar"></i> 
                         Payslip for <span class="employee-name"><?php echo htmlspecialchars($payslip_data['employee']); ?></span>
                     </h2>
                     <div class="date-range">
-                        <i class="fas fa-calendar-alt"></i> Period: <?php echo htmlspecialchars($start_date); ?> to <?php echo htmlspecialchars($end_date); ?>
+                        <i class="fas fa-calendar-alt"></i> Payroll Period: <?php echo htmlspecialchars($start_date); ?> to <?php echo htmlspecialchars($end_date); ?>
                     </div>
-                    
-                    <div class="net-income-display">
-                        <div class="label">NET INCOME</div>
+
+                    <!-- Summary Info Grid -->
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="label">Days Worked</div>
+                            <div class="value"><?php echo $payslip_data['days_worked']; ?> days</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">Overtime Hours</div>
+                            <div class="value"><?php echo number_format($payslip_data['overtime_hours'], 1); ?> hrs</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">Daily Rate</div>
+                            <div class="value">₱520.00</div>
+                        </div>
+                    </div>
+
+                    <!-- Earnings Section -->
+                    <div class="payslip-section">
+                        <div class="section-title">
+                            <i class="fas fa-money-bill-wave"></i> Earnings
+                        </div>
+                        <table class="payslip-table">
+                            <tr>
+                                <td>Basic Pay (<?php echo $payslip_data['days_worked']; ?> days × ₱520)</td>
+                                <td>₱<?php echo number_format($payslip_data['basic_pay'], 2); ?></td>
+                            </tr>
+                            <?php if ($payslip_data['overtime_pay'] > 0): ?>
+                            <tr>
+                                <td>Overtime Pay (<?php echo number_format($payslip_data['overtime_hours'], 1); ?> hrs × ₱65)</td>
+                                <td>₱<?php echo number_format($payslip_data['overtime_pay'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if ($payslip_data['night_diff_pay'] > 0): ?>
+                            <tr>
+                                <td>Night Differential</td>
+                                <td>₱<?php echo number_format($payslip_data['night_diff_pay'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if ($payslip_data['holiday_pay'] > 0): ?>
+                            <tr>
+                                <td>Holiday Premium</td>
+                                <td>₱<?php echo number_format($payslip_data['holiday_pay'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if ($payslip_data['sil_pay'] > 0): ?>
+                            <tr>
+                                <td>Service Incentive Leave (SIL)</td>
+                                <td>₱<?php echo number_format($payslip_data['sil_pay'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if ($payslip_data['cashier_bonus'] > 0): ?>
+                            <tr>
+                                <td>Cashier Bonus</td>
+                                <td>₱<?php echo number_format($payslip_data['cashier_bonus'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if ($payslip_data['allowance'] > 0): ?>
+                            <tr>
+                                <td>Allowance</td>
+                                <td>₱<?php echo number_format($payslip_data['allowance'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <tr class="total-row">
+                                <td>GROSS INCOME</td>
+                                <td>₱<?php echo number_format($payslip_data['gross_income'], 2); ?></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Deductions Section -->
+                    <div class="payslip-section">
+                        <div class="section-title">
+                            <i class="fas fa-minus-circle"></i> Deductions
+                        </div>
+                        <table class="payslip-table">
+                            <?php if ($payslip_data['sss'] > 0): ?>
+                            <tr>
+                                <td>SSS Contribution</td>
+                                <td>₱<?php echo number_format($payslip_data['sss'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if ($payslip_data['phic'] > 0): ?>
+                            <tr>
+                                <td>PhilHealth (PHIC)</td>
+                                <td>₱<?php echo number_format($payslip_data['phic'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if ($payslip_data['hdmf'] > 0): ?>
+                            <tr>
+                                <td>Pag-IBIG (HDMF)</td>
+                                <td>₱<?php echo number_format($payslip_data['hdmf'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if ($payslip_data['govt_loan'] > 0): ?>
+                            <tr>
+                                <td>Government Loan</td>
+                                <td>₱<?php echo number_format($payslip_data['govt_loan'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if ($payslip_data['late_deduction'] > 0): ?>
+                            <tr>
+                                <td>Late/Absent Deduction</td>
+                                <td>₱<?php echo number_format($payslip_data['late_deduction'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if ($payslip_data['total_deductions'] == 0): ?>
+                            <tr>
+                                <td colspan="2" style="text-align: center; color: #6c757d;">No deductions for this employee</td>
+                            </tr>
+                            <?php else: ?>
+                            <tr class="total-row">
+                                <td>TOTAL DEDUCTIONS</td>
+                                <td>₱<?php echo number_format($payslip_data['total_deductions'], 2); ?></td>
+                            </tr>
+                            <?php endif; ?>
+                        </table>
+                    </div>
+
+                    <!-- Net Income Card -->
+                    <div class="net-income-card">
+                        <div class="label"><i class="fas fa-wallet"></i> NET INCOME (Take Home Pay)</div>
                         <div class="amount">₱<?php echo number_format($payslip_data['net_income'], 2); ?></div>
+                        <div style="margin-top: 10px; font-size: 0.9rem; opacity: 0.8;">
+                            This amount matches the verified Excel payroll data
+                        </div>
                     </div>
                 </div>
             <?php endif; ?>
@@ -325,6 +658,11 @@ $conn->close();
                 <button onclick="location.href='index.php'" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
                 </button>
+                <?php if ($payslip_data): ?>
+                <button onclick="window.print()" class="btn btn-primary" style="margin-left: 10px;">
+                    <i class="fas fa-print"></i> Print Payslip
+                </button>
+                <?php endif; ?>
             </div>
         </div>
     </div>
