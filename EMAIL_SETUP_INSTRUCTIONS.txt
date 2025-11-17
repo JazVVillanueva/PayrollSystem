@@ -1,0 +1,46 @@
+========================================
+EMAIL SETUP INSTRUCTIONS
+========================================
+
+To enable ACTUAL email sending to jaz_villanueva@dlsu.edu.ph:
+
+STEP 1: Get Gmail App Password
+-------------------------------
+1. Go to: https://myaccount.google.com/apppasswords
+2. Sign in with your Gmail account
+3. Create an "App Password" for "Mail" 
+4. Google will generate a 16-character password (example: "abcd efgh ijkl mnop")
+5. Copy this password (without spaces)
+
+STEP 2: Edit send_payslips.php
+-------------------------------
+1. Open: C:\xampp\htdocs\PayrollSystem\send_payslips.php
+2. Find lines 103-104:
+   
+   $mail->Username   = 'your.email@gmail.com';  // Line 103
+   $mail->Password   = 'your-app-password';     // Line 104
+
+3. Replace with YOUR actual credentials:
+   
+   $mail->Username   = 'yourgmail@gmail.com';
+   $mail->Password   = 'abcdefghijklmnop';  // Your 16-char app password (no spaces)
+
+STEP 3: Save and Test
+---------------------
+1. Save send_payslips.php
+2. Go to: http://localhost/PayrollSystem/send_payslips.php
+3. Select an employee and click "Send Payslip Email"
+4. Check jaz_villanueva@dlsu.edu.ph inbox!
+
+TROUBLESHOOTING:
+----------------
+- Make sure you're using an App Password, NOT your regular Gmail password
+- The sending email can be any Gmail account you have access to
+- The receiving email (jaz_villanueva@dlsu.edu.ph) is already configured
+- If it still doesn't work, check spam folder
+
+SECURITY NOTE:
+--------------
+Don't share your send_payslips.php file with the App Password in it!
+
+========================================
