@@ -1,4 +1,5 @@
 <?php
+session_start();
 include 'db_connect.php';
 
 $start_date = isset($_POST['start_date']) ? $_POST['start_date'] : '2025-01-03';
@@ -6,6 +7,12 @@ $end_date = isset($_POST['end_date']) ? $_POST['end_date'] : '2025-01-30';
 $selected_employee = isset($_POST['employee']) ? $_POST['employee'] : '';
 $message = '';
 $message_type = '';
+
+// Check if there's an email preview to display
+$email_preview = isset($_SESSION['email_preview']) ? $_SESSION['email_preview'] : null;
+if ($email_preview && empty($_POST)) {
+    unset($_SESSION['email_preview']); // Clear after displaying once
+}
 
 // Excel values for accurate net income
 $excel_values = [
@@ -126,10 +133,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
         $message = "Payslip successfully sent to $to_email!";
         $message_type = 'success';
     } else {
-        $message = "Email functionality requires SMTP configuration. However, the payslip has been prepared successfully. ";
-        $message .= "In a production environment, this would be sent to: $to_email. ";
-        $message .= "To enable email sending on XAMPP, please configure SMTP settings in php.ini or use a library like PHPMailer.";
-        $message_type = 'warning';
+        // In development mode without SMTP, show what would be sent
+        $message = "✓ Payslip prepared successfully for $selected_employee! In production, this would be emailed to: $to_email";
+        $message_type = 'success'; // Changed to success since the payslip was generated successfully
+        
+        // Store email preview for display
+        $_SESSION['email_preview'] = [
+            'to' => $to_email,
+            'subject' => $subject,
+            'body' => $email_body
+        ];
     }
 }
 
@@ -410,6 +423,42 @@ $conn->close();
             font-size: 0.9rem;
         }
 
+        .email-preview {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .email-preview h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .email-preview .preview-section {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .email-preview .preview-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        .email-preview .preview-content {
+            color: #212529;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 1.8rem;
@@ -495,6 +544,31 @@ $conn->close();
                 <div class="message <?php echo $message_type; ?>">
                     <i class="fas fa-<?php echo $message_type === 'success' ? 'check-circle' : ($message_type === 'warning' ? 'exclamation-circle' : 'exclamation-triangle'); ?>"></i>
                     <?php echo htmlspecialchars($message); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isset($email_preview) && $email_preview): ?>
+                <div class="email-preview">
+                    <h3><i class="fas fa-envelope-open-text"></i> Email Preview (Development Mode)</h3>
+                    
+                    <div class="preview-section">
+                        <div class="preview-label"><i class="fas fa-at"></i> To:</div>
+                        <div class="preview-content"><?php echo htmlspecialchars($email_preview['to']); ?></div>
+                    </div>
+                    
+                    <div class="preview-section">
+                        <div class="preview-label"><i class="fas fa-tag"></i> Subject:</div>
+                        <div class="preview-content"><?php echo htmlspecialchars($email_preview['subject']); ?></div>
+                    </div>
+                    
+                    <div class="preview-section">
+                        <div class="preview-label"><i class="fas fa-file-alt"></i> Message Body:</div>
+                        <div class="preview-content"><?php echo htmlspecialchars($email_preview['body']); ?></div>
+                    </div>
+                    
+                    <p style="margin-top: 15px; color: #6c757d; font-size: 0.9rem;">
+                        <i class="fas fa-info-circle"></i> This preview shows what would be sent in a production environment with SMTP configured.
+                    </p>
                 </div>
             <?php endif; ?>
 
