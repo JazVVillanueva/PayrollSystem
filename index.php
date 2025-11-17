@@ -80,9 +80,6 @@ if (isset($_GET['clear_timesheet'])) {
 // Automatically show table if data exists (no need for ?show_timesheet=1)
 $records = null;
 $show_table = false;
-$rows_per_page = 30; // Increased to show more rows per page
-$current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$offset = ($current_page - 1) * $rows_per_page;
 
 // Check if any data exists
 $total_result = $conn->query("SELECT COUNT(*) as total FROM timesheet");
@@ -144,16 +141,14 @@ if ($show_table) {
     $stmt_total->execute();
     $total_result = $stmt_total->get_result();
     $total_rows = $total_result->fetch_assoc()['total'];
-    $total_pages = ceil($total_rows / $rows_per_page);
     $stmt_total->close();
 
-    // Get paginated results
-    $query = "SELECT id, Date, Shift_No, Business_Unit, Name, Time_IN, Time_OUT, Hours, Role, Remarks, Deductions, Short_Misload_Bonus_SIL FROM timesheet $where_sql ORDER BY STR_TO_DATE(Date, '%Y-%m-%d') ASC LIMIT ? OFFSET ?";
+    // Get all results (no pagination)
+    $query = "SELECT * FROM timesheet $where_sql ORDER BY Date DESC, Time_IN DESC";
     $stmt = $conn->prepare($query);
-    $types .= "ii";
-    $params[] = $rows_per_page;
-    $params[] = $offset;
-    $stmt->bind_param($types, ...$params);
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
     $stmt->execute();
     $records = $stmt->get_result();
     $stmt->close();
@@ -680,7 +675,7 @@ if ($show_table) {
                     <i class="fas fa-trash-alt icon"></i>Delete All Records
                 </button>
                 
-                <div class="table-wrapper">
+                <div class="table-wrapper" style="max-height: 600px; overflow-y: auto;">
                 <table>
                     <thead>
                         <tr>
@@ -722,51 +717,8 @@ if ($show_table) {
                 </table>
                 </div>
 
-                <!-- Pagination -->
-                <div class="pagination">
-                    <?php if ($current_page > 1): ?>
-                        <a href="?page=<?php echo $current_page - 1; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>"><button>Previous</button></a>
-                    <?php endif; ?>
-                    <?php 
-                    // Limit to showing max 3 page numbers
-                    $max_pages_to_show = 3;
-                    if ($total_pages <= $max_pages_to_show) {
-                        // Show all pages if total is 3 or less
-                        for ($i = 1; $i <= $total_pages; $i++):
-                    ?>
-                        <a href="?page=<?php echo $i; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>">
-                            <button <?php if ($i == $current_page) echo 'class="active"'; ?>><?php echo $i; ?></button>
-                        </a>
-                    <?php 
-                        endfor;
-                    } else {
-                        // Show current page and surrounding pages, max 3
-                        $start_page = max(1, $current_page - 1);
-                        $end_page = min($total_pages, $start_page + $max_pages_to_show - 1);
-                        
-                        // Adjust if we're near the end
-                        if ($end_page - $start_page < $max_pages_to_show - 1) {
-                            $start_page = max(1, $end_page - $max_pages_to_show + 1);
-                        }
-                        
-                        for ($i = $start_page; $i <= $end_page; $i++):
-                    ?>
-                        <a href="?page=<?php echo $i; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>">
-                            <button <?php if ($i == $current_page) echo 'class="active"'; ?>><?php echo $i; ?></button>
-                        </a>
-                    <?php 
-                        endfor;
-                        
-                        // Show total pages info
-                        if ($total_pages > $max_pages_to_show): ?>
-                            <span style="padding: 0.5rem 1rem; color: white;">of <?php echo $total_pages; ?></span>
-                    <?php 
-                        endif;
-                    }
-                    ?>
-                    <?php if ($current_page < $total_pages): ?>
-                        <a href="?page=<?php echo $current_page + 1; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>"><button>Next</button></a>
-                    <?php endif; ?>
+                <div style="text-align: center; padding: 1rem; color: white; opacity: 0.8;">
+                    <i class="fas fa-table icon"></i>Showing all <?php echo $total_rows; ?> records
                 </div>
             <?php endif; ?>
         </section>
