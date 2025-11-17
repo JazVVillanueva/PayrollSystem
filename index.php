@@ -408,6 +408,11 @@ if ($show_table) {
             border-radius: 15px;
         }
         
+        .dark-mode .search-form {
+            background: rgba(50, 50, 70, 0.6) !important;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+        
         .search-form > div {
             position: relative;
         }
