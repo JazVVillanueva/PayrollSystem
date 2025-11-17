@@ -133,41 +133,116 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
 
     $stmt->close();
 
-    // Generate CSV content
-    $csv_content = "Payslip for $selected_employee ($start_date to $end_date)\n";
-    $csv_content .= "Item,Value\n";
-    $csv_content .= "Total Days of Work,$total_days_worked\n";
-    $csv_content .= "Rate (per day),$daily_rate PHP\n";
-    $csv_content .= "Hrs of Overtime,$total_overtime_hours\n";
-    $csv_content .= "Rate (per overtime hour),$overtime_rate PHP\n";
-    $csv_content .= "Allowance,$total_allowance PHP\n";
-    $csv_content .= "Night Diff.,$night_diff_pay PHP\n";
-    $csv_content .= "Holiday,$holiday_pay PHP\n";
-    $csv_content .= "SIL,$sil_pay PHP\n";
-    $csv_content .= "GROSS Income," . number_format($gross_income, 2) . " PHP\n";
-    $csv_content .= "SSS," . number_format($sss, 2) . " PHP\n";
-    $csv_content .= "PHIC," . number_format($phic, 2) . " PHP\n";
-    $csv_content .= "HDMF," . number_format($hdmf, 2) . " PHP\n";
-    $csv_content .= "Govt. Loan," . number_format($govt_loan, 2) . " PHP\n";
-    $csv_content .= "Late/Absent," . number_format($late_absent, 2) . " PHP\n";
-    $csv_content .= "Misload/Shortage," . number_format($misload_shortage, 2) . " PHP\n";
-    $csv_content .= "Uniform/CA," . number_format($uniform_ca, 2) . " PHP\n";
-    $csv_content .= "Total Deductions," . number_format($total_deductions, 2) . " PHP\n";
-    $csv_content .= "Net Income," . number_format($net_income, 2) . " PHP\n";
-
-    // Suppress warnings and force CSV download
-    error_reporting(0); // Suppress warnings to avoid header issues
-    $csv_file_name = 'payslip_' . str_replace(' ', '_', $selected_employee) . '.csv';
-    header('Content-Type: text/csv');
-    header('Content-Disposition: attachment; filename="' . $csv_file_name . '"');
-    header('Cache-Control: no-cache, no-store, must-revalidate');
-    header('Pragma: no-cache');
-    header('Expires: 0');
-    echo $csv_content;
-    exit; // Stop further execution to force download
-
-    // Success message (won't show due to exit, but can be added if needed)
-    $message = 'Payslip CSV downloaded successfully!';
+    // Generate PDF using FPDF
+    require('fpdf.php');
+    
+    $pdf = new FPDF();
+    $pdf->AddPage();
+    
+    // Header
+    $pdf->SetFont('Arial', 'B', 20);
+    $pdf->Cell(0, 15, 'PAYSLIP', 0, 1, 'C');
+    $pdf->Ln(5);
+    
+    // Employee and Date Info
+    $pdf->SetFont('Arial', 'B', 12);
+    $pdf->Cell(0, 8, 'Employee: ' . $selected_employee, 0, 1);
+    $pdf->SetFont('Arial', '', 11);
+    $pdf->Cell(0, 7, 'Period: ' . date('M d, Y', strtotime($start_date)) . ' to ' . date('M d, Y', strtotime($end_date)), 0, 1);
+    $pdf->Ln(5);
+    
+    // Earnings Section
+    $pdf->SetFillColor(102, 126, 234);
+    $pdf->SetTextColor(255, 255, 255);
+    $pdf->SetFont('Arial', 'B', 12);
+    $pdf->Cell(0, 10, 'EARNINGS', 0, 1, 'L', true);
+    
+    $pdf->SetTextColor(0, 0, 0);
+    $pdf->SetFont('Arial', '', 10);
+    $pdf->SetFillColor(247, 250, 252);
+    
+    // Earnings rows
+    $earnings = [
+        ['Total Days of Work', $total_days_worked . ' days'],
+        ['Daily Rate', 'PHP ' . number_format($daily_rate, 2)],
+        ['Basic Pay', 'PHP ' . number_format($basic_pay, 2)],
+        ['Overtime Hours', $total_overtime_hours . ' hrs'],
+        ['Overtime Rate', 'PHP ' . number_format($overtime_rate, 2) . '/hr'],
+        ['Overtime Pay', 'PHP ' . number_format($overtime_pay, 2)],
+        ['Night Differential', 'PHP ' . number_format($night_diff_pay, 2)],
+        ['Holiday Premium', 'PHP ' . number_format($holiday_pay, 2)],
+        ['SIL Pay', 'PHP ' . number_format($sil_pay, 2)],
+        ['Cashier Bonus', 'PHP ' . number_format($cashier_pay, 2)],
+        ['Allowance', 'PHP ' . number_format($total_allowance, 2)]
+    ];
+    
+    $fill = false;
+    foreach ($earnings as $item) {
+        $pdf->Cell(120, 8, '  ' . $item[0], 0, 0, 'L', $fill);
+        $pdf->Cell(70, 8, $item[1], 0, 1, 'R', $fill);
+        $fill = !$fill;
+    }
+    
+    // Gross Income
+    $pdf->SetFont('Arial', 'B', 11);
+    $pdf->SetFillColor(230, 240, 255);
+    $pdf->Cell(120, 10, '  GROSS INCOME', 0, 0, 'L', true);
+    $pdf->Cell(70, 10, 'PHP ' . number_format($gross_income, 2), 0, 1, 'R', true);
+    $pdf->Ln(5);
+    
+    // Deductions Section
+    $pdf->SetFillColor(220, 53, 69);
+    $pdf->SetTextColor(255, 255, 255);
+    $pdf->SetFont('Arial', 'B', 12);
+    $pdf->Cell(0, 10, 'DEDUCTIONS', 0, 1, 'L', true);
+    
+    $pdf->SetTextColor(0, 0, 0);
+    $pdf->SetFont('Arial', '', 10);
+    $pdf->SetFillColor(247, 250, 252);
+    
+    // Deductions rows
+    $deductions = [
+        ['SSS', 'PHP ' . number_format($sss, 2)],
+        ['PhilHealth (PHIC)', 'PHP ' . number_format($phic, 2)],
+        ['Pag-IBIG (HDMF)', 'PHP ' . number_format($hdmf, 2)],
+        ['Government Loan', 'PHP ' . number_format($govt_loan, 2)],
+        ['Late/Absent', 'PHP ' . number_format($late_absent, 2)],
+        ['Misload/Shortage', 'PHP ' . number_format($misload_shortage, 2)],
+        ['Uniform/CA', 'PHP ' . number_format($uniform_ca, 2)]
+    ];
+    
+    $fill = false;
+    foreach ($deductions as $item) {
+        $pdf->Cell(120, 8, '  ' . $item[0], 0, 0, 'L', $fill);
+        $pdf->Cell(70, 8, $item[1], 0, 1, 'R', $fill);
+        $fill = !$fill;
+    }
+    
+    // Total Deductions
+    $pdf->SetFont('Arial', 'B', 11);
+    $pdf->SetFillColor(255, 230, 230);
+    $pdf->Cell(120, 10, '  TOTAL DEDUCTIONS', 0, 0, 'L', true);
+    $pdf->Cell(70, 10, 'PHP ' . number_format($total_deductions, 2), 0, 1, 'R', true);
+    $pdf->Ln(5);
+    
+    // Net Income (Final)
+    $pdf->SetFillColor(72, 187, 120);
+    $pdf->SetTextColor(255, 255, 255);
+    $pdf->SetFont('Arial', 'B', 14);
+    $pdf->Cell(120, 12, '  NET INCOME', 0, 0, 'L', true);
+    $pdf->Cell(70, 12, 'PHP ' . number_format($net_income, 2), 0, 1, 'R', true);
+    
+    // Footer
+    $pdf->Ln(10);
+    $pdf->SetTextColor(128, 128, 128);
+    $pdf->SetFont('Arial', 'I', 9);
+    $pdf->Cell(0, 5, 'Generated on ' . date('F d, Y h:i A'), 0, 1, 'C');
+    $pdf->Cell(0, 5, 'This is a system-generated document.', 0, 1, 'C');
+    
+    // Output PDF
+    $pdf_file_name = 'Payslip_' . str_replace([',', ' '], ['', '_'], $selected_employee) . '_' . date('Ymd') . '.pdf';
+    $pdf->Output('D', $pdf_file_name);
+    exit;
 }
 
 $conn->close();
