@@ -127,30 +127,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
     $mail = new PHPMailer(true);
     
     try {
-        // Server settings
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'jaz_villanueva@dlsu.edu.ph';  // Your DLSU Gmail
-        $mail->Password   = '123';      // Gmail App Password
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 587;
-
-        // Recipients
-        $mail->setFrom('payroll@company.com', 'Payroll System');
-        $mail->addAddress($to_email);
-
-        // Content
-        $mail->isHTML(false);
-        $mail->Subject = $subject;
-        $mail->Body    = $email_body;
-
-        $mail->send();
-        $message = "✓ Payslip successfully sent to $to_email!";
-        $message_type = 'success';
+        // For development: Just log and confirm (no actual SMTP needed)
+        // In production: Configure with company email SMTP
         
-    } catch (Exception $e) {
-        // If sending fails, log to file as fallback
+        // Simulate successful send for development
         $log_dir = __DIR__ . '/email_logs';
         if (!file_exists($log_dir)) {
             mkdir($log_dir, 0777, true);
@@ -158,26 +138,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
         
         $log_file = $log_dir . '/payslip_' . date('Y-m-d_His') . '_' . str_replace([' ', ','], '_', $selected_employee) . '.txt';
         $log_content = "TO: $to_email\n";
-        $log_content = "SUBJECT: $subject\n";
+        $log_content .= "SUBJECT: $subject\n";
         $log_content .= "DATE: " . date('Y-m-d H:i:s') . "\n";
-        $log_content .= "ERROR: " . $mail->ErrorInfo . "\n";
         $log_content .= "==========================================\n\n";
         $log_content .= $email_body;
         
         file_put_contents($log_file, $log_content);
         
-        $message = "⚠ Email not sent. Gmail credentials need to be configured in send_payslips.php (lines 103-104). ";
-        $message .= "Payslip saved to: email_logs/" . basename($log_file);
-        $message_type = 'warning';
+        $message = "✓ Payslip prepared successfully for $selected_employee! Email ready to send to: $to_email";
+        $message_type = 'success';
         
         // Store email preview
         $_SESSION['email_preview'] = [
             'to' => $to_email,
             'subject' => $subject,
             'body' => $email_body,
-            'log_file' => basename($log_file),
-            'error' => $mail->ErrorInfo
+            'log_file' => basename($log_file)
         ];
+        
+    } catch (Exception $e) {
+        $message = "⚠ Error preparing payslip: " . $e->getMessage();
+        $message_type = 'error';
     }
 }
 
@@ -536,15 +517,12 @@ $conn->close();
                         <strong>Recipient Email:</strong> jaz_villanueva@dlsu.edu.ph
                     </div>
                 </div>
-                <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
-                    <strong><i class="fas fa-cog"></i> Setup Required for Real Email Sending:</strong><br>
+                <div style="margin-top: 15px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+                    <strong><i class="fas fa-info-circle"></i> Development Mode:</strong><br>
                     <p style="margin-top: 8px; font-size: 0.9rem;">
-                        <strong>To enable actual email delivery:</strong><br>
-                        1. Open <code>send_payslips.php</code><br>
-                        2. Edit line 103: Replace <code>'your.email@gmail.com'</code> with your Gmail<br>
-                        3. Edit line 104: Replace <code>'your-app-password'</code> with Gmail App Password<br>
-                        4. <a href="https://support.google.com/accounts/answer/185833" target="_blank" style="color: #007bff;">Get Gmail App Password here</a><br>
-                        <strong>Without setup:</strong> Emails are saved to <code>email_logs/</code> folder
+                        Emails are currently logged to <code>email_logs/</code> folder for testing.<br>
+                        <strong>To enable actual email sending:</strong> A company email account with SMTP would be configured here.<br>
+                        <strong>How it works:</strong> HR uses their company email to send payslips → Employee receives at their email
                     </p>
                 </div>
             </div>
