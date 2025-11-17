@@ -120,7 +120,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
     $headers .= "Reply-To: payroll@company.com\r\n";
     $headers .= "X-Mailer: PHP/" . phpversion();
 
-    // Try to send email, but provide helpful message if mail server not configured
+    // Configure SMTP for Gmail (alternative to php.ini configuration)
+    ini_set("SMTP", "smtp.gmail.com");
+    ini_set("smtp_port", "587");
+    
+    // Try to send email
     $mail_sent = false;
     
     // Check if mail function is available
@@ -133,15 +137,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
         $message = "Payslip successfully sent to $to_email!";
         $message_type = 'success';
     } else {
-        // In development mode without SMTP, show what would be sent
-        $message = "✓ Payslip prepared successfully for $selected_employee! In production, this would be emailed to: $to_email";
-        $message_type = 'success'; // Changed to success since the payslip was generated successfully
+        // For XAMPP/local development, we need a proper mail library
+        // Let's create a simple file-based email log as a workaround
+        $log_dir = __DIR__ . '/email_logs';
+        if (!file_exists($log_dir)) {
+            mkdir($log_dir, 0777, true);
+        }
+        
+        $log_file = $log_dir . '/payslip_' . date('Y-m-d_His') . '_' . str_replace([' ', ','], '_', $selected_employee) . '.txt';
+        $log_content = "TO: $to_email\n";
+        $log_content .= "SUBJECT: $subject\n";
+        $log_content .= "DATE: " . date('Y-m-d H:i:s') . "\n";
+        $log_content .= "==========================================\n\n";
+        $log_content .= $email_body;
+        
+        file_put_contents($log_file, $log_content);
+        
+        $message = "✓ Payslip prepared for $selected_employee! Email logged to: email_logs folder. ";
+        $message .= "To send real emails, you need to configure SMTP in XAMPP or use a service like SendGrid/Mailgun.";
+        $message_type = 'success';
         
         // Store email preview for display
         $_SESSION['email_preview'] = [
             'to' => $to_email,
             'subject' => $subject,
-            'body' => $email_body
+            'body' => $email_body,
+            'log_file' => basename($log_file)
         ];
     }
 }
@@ -501,6 +522,15 @@ $conn->close();
                         <strong>Recipient Email:</strong> jaz_villanueva@dlsu.edu.ph
                     </div>
                 </div>
+                <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                    <strong><i class="fas fa-tools"></i> Need Real Email Delivery?</strong><br>
+                    <p style="margin-top: 8px; font-size: 0.9rem;">
+                        For actual email sending, configure SMTP in XAMPP:<br>
+                        • Install <strong>sendmail</strong> or use Gmail SMTP<br>
+                        • Or deploy to a production server with email service<br>
+                        • Currently: emails are logged to <code>email_logs/</code> folder
+                    </p>
+                </div>
             </div>
 
             <div class="form-section">
@@ -549,7 +579,13 @@ $conn->close();
 
             <?php if (isset($email_preview) && $email_preview): ?>
                 <div class="email-preview">
-                    <h3><i class="fas fa-envelope-open-text"></i> Email Preview (Development Mode)</h3>
+                    <h3><i class="fas fa-envelope-open-text"></i> Email Preview</h3>
+                    
+                    <?php if (isset($email_preview['log_file'])): ?>
+                    <div style="background: #d1ecf1; border: 2px solid #0c5460; padding: 12px; border-radius: 8px; margin-bottom: 15px; color: #0c5460;">
+                        <i class="fas fa-save"></i> <strong>Email saved to file:</strong> <?php echo htmlspecialchars($email_preview['log_file']); ?>
+                    </div>
+                    <?php endif; ?>
                     
                     <div class="preview-section">
                         <div class="preview-label"><i class="fas fa-at"></i> To:</div>
@@ -567,7 +603,7 @@ $conn->close();
                     </div>
                     
                     <p style="margin-top: 15px; color: #6c757d; font-size: 0.9rem;">
-                        <i class="fas fa-info-circle"></i> This preview shows what would be sent in a production environment with SMTP configured.
+                        <i class="fas fa-info-circle"></i> This email has been logged and would be sent to jaz_villanueva@dlsu.edu.ph in production.
                     </p>
                 </div>
             <?php endif; ?>
