@@ -111,18 +111,181 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Batch Upload</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Batch Upload - Payroll System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container { max-width: 800px; width: 100%; }
+        .upload-card {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        h2 { 
+            color: #1a202c;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        .subtitle {
+            color: #718096;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 15px;
+            padding: 3rem 2rem;
+            margin: 2rem 0;
+            transition: all 0.3s;
+            background: #f7fafc;
+        }
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #edf2f7;
+        }
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .file-label {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.05rem;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .file-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        button { 
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.05rem;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+            margin-top: 1.5rem;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.6);
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.75rem 1.5rem;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .back-link:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+        .requirements {
+            background: #edf2f7;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: left;
+        }
+        .requirements h3 {
+            color: #2d3748;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+        .requirements ul {
+            list-style: none;
+            padding: 0;
+        }
+        .requirements li {
+            color: #4a5568;
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        .requirements li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #48bb78;
+            font-weight: bold;
+        }
+        .icon { margin-right: 0.5rem; }
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            .upload-card { padding: 2rem 1.5rem; }
+            h2 { font-size: 1.5rem; }
+        }
+    </style>
 </head>
 <body>
-    <h2>Batch Upload Timesheet</h2>
-    <p>Upload a CSV file with columns: Date, Shift No., Business Unit, Name, Time IN, Time OUT, Hours, Role, Remarks, Deductions, Short/Misload/Bonus/SIL.</p>
-    <p><strong>Note:</strong> Ensure dates are in YYYY-MM-DD format. If your CSV has a header row, the code will skip it (currently commented out).</p>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".csv" required>
-        <button type="submit">Upload CSV</button>
-    </form>
-    <br>
-    <a href="index.php">Back to Dashboard</a>
+    <div class="container">
+        <div class="upload-card">
+            <h2><i class="fas fa-cloud-upload-alt icon"></i>Batch Upload Timesheet</h2>
+            <p class="subtitle">Upload your CSV file to import multiple timesheet entries at once</p>
+            
+            <div class="requirements">
+                <h3><i class="fas fa-info-circle icon"></i>Requirements</h3>
+                <ul>
+                    <li>CSV file with 11 columns in order</li>
+                    <li>Columns: Date, Shift No., Business Unit, Name, Time IN, Time OUT, Hours, Role, Remarks, Deductions, Short/Misload/Bonus/SIL</li>
+                    <li>Dates must be in YYYY-MM-DD format</li>
+                    <li>Maximum file size: 5MB</li>
+                </ul>
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data">
+                <div class="upload-area">
+                    <div class="upload-icon">
+                        <i class="fas fa-file-csv"></i>
+                    </div>
+                    <label for="file" class="file-label">
+                        <i class="fas fa-folder-open icon"></i>Choose CSV File
+                    </label>
+                    <input type="file" id="file" name="file" accept=".csv" required onchange="document.getElementById('file-name').textContent = this.files[0]?.name || 'No file chosen'">
+                    <p id="file-name" style="margin-top: 1rem; color: #718096;">No file chosen</p>
+                </div>
+                <button type="submit"><i class="fas fa-upload icon"></i>Upload CSV</button>
+            </form>
+            
+            <a href="index.php" class="back-link">
+                <i class="fas fa-arrow-left icon"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
 </body>
 </html>
