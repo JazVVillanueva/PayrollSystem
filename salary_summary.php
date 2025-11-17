@@ -43,15 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $total_allowance = 0;
         $total_cashier_hours = 0;
         $total_overtime_pay = 0.0;
-        $daily_rate    = $empRate[$employee] ?? 520.0;   // fallback 520 if missing
-        $regular_hours = 8;
-        $overtime_rate = $daily_rate / $regular_hours; // kept for compatibility; we won't use it later
+        $daily_rate = 520; // Fixed daily rate
+        $overtime_rate = 65; // Fixed overtime rate
 
 
         $holiday_dates = [
-        '2025-01-01' => 1.00, // Regular - New Year
-        '2025-01-05' => 1.00, // Regular - Three Kings
-        '2025-01-29' => 0.30, // Special - Chinese New Year
+        '2025-01-29' => 0.30 // Chinese New Year: Special Non-Working (+30%)
         ];
 
 
@@ -65,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $total_deductions = 0;
         $bonuses = 0;
 
-        $exempt_employees = ['Richards, Sue', 'Grimm, Ben', 'Hammond, Jim', 'Barnes, James', 'Murdock, Matthew', 'Allen, Barry', 'Curry, Arthur'];
+        $exempt_employees = ['Richards, Sue', 'Grimm, Ben', 'Hammond, Jim', 'Barnes, James', 'Murdock, Mathew', 'Allen, Barry', 'Curry, Arthur'];
 
         $processed_dates = [];
         $processed_holidays = [];
@@ -84,8 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $deductions = $row['Deductions'];
             $dept_row = $row['Business_Unit'] ?? '';
             $shift_no = isset($row['Shift_No']) ? (int)$row['Shift_No'] : 0;
-            $regular_hours_row = (stripos($dept_row, 'Canteen') !== false) ? 12 : 8;
-            $ot_rate_row = $daily_rate / $regular_hours_row;
 
             // Skip duplicate rows (same date, time_in, time_out, hours, remarks)
             $row_key = $date . '|' . $row['Time_IN'] . '|' . $row['Time_OUT'] . '|' . $hours . '|' . $remarks;
@@ -123,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (stripos($remarks, 'Overtime') !== false) {
                 $total_overtime_hours += $hours;
-                $total_overtime_pay += $hours * $ot_rate_row;
+                $total_overtime_pay += $hours * 65; // Fixed OT rate
             }
 
             // Night differential: 3rd shift only (Shift_No = 3)
@@ -167,12 +162,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $emp_ded = $conn->query("SELECT sss, phic, hdmf, govt FROM employees WHERE name = '$employee'");
-        if ($emp_ded && $d = $emp_ded->fetch_assoc()) {
-            $sss = (float)$d['sss'];
-            $phic = (float)$d['phic'];
-            $hdmf = (float)$d['hdmf'];
-            $govt_loan = (float)$d['govt'];
+        // Add SIL to night differential: Each SIL counts as 52 PHP night diff
+        $total_night_diff += $total_sil_count * 52;
+
+        // Add Three Kings Day premium to all employees if in range (even if not worked)
+        if ($start_date <= '2025-01-05' && $end_date >= '2025-01-05') {
+            $total_holiday_premium += $daily_rate * 1.00; // +520 PHP
+        }
+
+        // Standard Deductions (if not exempt)
+        if (!in_array($employee, $exempt_employees)) {
+            $sss = 562.5;
+            $phic = 312.5;
+            $hdmf = 200;
         }
 
 
@@ -190,16 +192,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cashier_pay = floor($total_cashier_hours / 8) * 40;
         $subtotal = $basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay + $sil_pay + $cashier_pay;
         
-        // Calculate allowance based on days with regular (non-OT) work only
-        $regular_work_days = 0;
-        foreach ($dayBuckets as $d => $info) {
-            if ($info['has_regular_work']) {
-                $regular_work_days++;
-            }
+        // Allowance: 20php if total daily pay > 520 (after basic + bonuses)
+        if ($subtotal > 520) {
+            $total_allowance = 20;
         }
-        $worked_days = $regular_work_days > 0 ? $regular_work_days : count($processed_dates);
-
-        $total_allowance = ($daily_rate > 520) ? (20 * $worked_days) : 0;
 
 
         $gross_income = $basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay
