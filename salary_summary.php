@@ -227,50 +227,354 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Salary Summary</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Salary Summary - Payroll System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-        form { margin-bottom: 20px; }
-        select, input { padding: 8px; margin: 5px; }
-        button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
-        .summary-table { margin-top: 20px; }
-        .summary-table table { width: 100%; border-collapse: collapse; }
-        .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        .summary-table th { background-color: #f2f2f2; }
-        .back-button { margin-top: 20px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        h1 { 
+            color: #1a202c;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #718096;
+            font-size: 0.95rem;
+        }
+        
+        .form-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        form {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        label { 
+            display: block;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        input[type="date"] { 
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        input[type="date"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        button { 
+            padding: 0.75rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .summary-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f7fafc;
+        }
+        
+        .summary-header h2 {
+            color: #1a202c;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        .date-range {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table { 
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        th, td { 
+            padding: 1rem;
+            text-align: left;
+        }
+        
+        th { 
+            background: #f7fafc;
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        th:first-child {
+            border-top-left-radius: 10px;
+        }
+        
+        th:last-child {
+            border-top-right-radius: 10px;
+        }
+        
+        tbody tr {
+            border-bottom: 1px solid #f7fafc;
+            transition: all 0.2s;
+        }
+        
+        tbody tr:hover {
+            background: #f7fafc;
+        }
+        
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+        
+        td {
+            color: #4a5568;
+        }
+        
+        .employee-name {
+            font-weight: 500;
+            color: #2d3748;
+        }
+        
+        .income-amount {
+            font-weight: 600;
+            color: #48bb78;
+            font-size: 1.05rem;
+        }
+        
+        .total-row {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .total-row td {
+            color: white !important;
+            padding: 1.25rem 1rem;
+        }
+        
+        .total-row:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+        }
+        
+        .back-button {
+            text-align: center;
+        }
+        
+        .back-button button {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        .back-button button:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .icon {
+            margin-right: 0.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            form {
+                flex-direction: column;
+            }
+            
+            .form-group {
+                width: 100%;
+            }
+            
+            button {
+                width: 100%;
+            }
+            
+            .summary-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            
+            table {
+                font-size: 0.9rem;
+            }
+            
+            th, td {
+                padding: 0.75rem 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Salary Summary</h1>
-    <form method="POST">
-        <label for="start_date">Start Date:</label>
-        <input type="date" id="start_date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>" required>
-        
-        <label for="end_date">End Date:</label>
-        <input type="date" id="end_date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>" required>
-        
-        <button type="submit">Generate Summary</button>
-    </form>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-chart-line icon"></i>Salary Summary</h1>
+            <p class="subtitle">Generate comprehensive payroll reports for any date range</p>
+        </div>
+
+        <div class="form-card">
+            <form method="POST">
+                <div class="form-group">
+                    <label><i class="far fa-calendar-alt icon"></i>Start Date</label>
+                    <input type="date" name="start_date" required value="<?php echo htmlspecialchars($start_date); ?>">
+                </div>
+                
+                <div class="form-group">
+                    <label><i class="far fa-calendar-check icon"></i>End Date</label>
+                    <input type="date" name="end_date" required value="<?php echo htmlspecialchars($end_date); ?>">
+                </div>
+                
+                <button type="submit"><i class="fas fa-calculator icon"></i>Generate Summary</button>
+            </form>
+        </div>
 
     <?php if (!empty($summary_data)): ?>
-        <div class="summary-table">
-            <h2>Salary Summary (<?php echo htmlspecialchars($start_date); ?> to <?php echo htmlspecialchars($end_date); ?>)</h2>
-            <table>
-                <tr><th style="color: black;">Employee Name</th><th style="color: black;">Net Income</th></tr>
-                <?php foreach ($summary_data as $data): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($data['name']); ?></td>
-                        <td><?php echo number_format($data['net_income'], 2); ?> PHP</td>
-                    </tr>
-                <?php endforeach; ?>
-                <tr><th style="color: black;">TOTAL</th><th style="color: black;"><?php echo number_format($total_net_income, 2); ?> PHP</th></tr>
-            </table>
+        <div class="summary-card">
+            <div class="summary-header">
+                <h2><i class="fas fa-users icon"></i>Employee Payroll Report</h2>
+                <div class="date-range">
+                    <i class="far fa-calendar icon"></i>
+                    <?php echo htmlspecialchars($start_date); ?> to <?php echo htmlspecialchars($end_date); ?>
+                </div>
+            </div>
+            
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-user icon"></i>Employee Name</th>
+                            <th><i class="fas fa-coins icon"></i>Net Income (PHP)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($summary_data as $data): ?>
+                            <tr>
+                                <td class="employee-name"><?php echo htmlspecialchars($data['name']); ?></td>
+                                <td class="income-amount">₱ <?php echo number_format($data['net_income'], 2); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        <tr class="total-row">
+                            <td><i class="fas fa-calculator icon"></i>TOTAL</td>
+                            <td>₱ <?php echo number_format($total_net_income, 2); ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     <?php endif; ?>
 
     <div class="back-button">
-        <button onclick="location.href='index.php'">Back to Dashboard</button>
+        <button onclick="location.href='index.php'">
+            <i class="fas fa-arrow-left icon"></i>Back to Dashboard
+        </button>
+    </div>
     </div>
 </body>
 </html>
