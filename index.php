@@ -77,25 +77,12 @@ if (isset($_GET['clear_timesheet'])) {
     }
 }
 
-// Handle soft delete all request
-if (isset($_GET['soft_delete_all'])) {
-    // Check if deleted_at column exists, if not create it
-    $check_column = $conn->query("SHOW COLUMNS FROM timesheet LIKE 'deleted_at'");
-    if ($check_column->num_rows == 0) {
-        $conn->query("ALTER TABLE timesheet ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL");
-    }
-    
-    // Soft delete all records
-    $conn->query("UPDATE timesheet SET deleted_at = NOW() WHERE deleted_at IS NULL");
-    echo "<div class='alert success'>All records have been soft deleted (archived)!</div>";
-}
-
 // Automatically show table if data exists (no need for ?show_timesheet=1)
 $records = null;
 $show_table = false;
 
-// Check if any data exists (excluding soft-deleted)
-$total_result = $conn->query("SELECT COUNT(*) as total FROM timesheet WHERE deleted_at IS NULL");
+// Check if any data exists
+$total_result = $conn->query("SELECT COUNT(*) as total FROM timesheet");
 if (!$total_result) {
     die("Error executing query: " . $conn->error);
 }
@@ -105,7 +92,7 @@ $show_table = $total_rows > 0;
 // Fetch distinct dates for the date dropdown
 $date_options = [];
 if ($show_table) {
-    $date_query = $conn->query("SELECT DISTINCT Date FROM timesheet WHERE deleted_at IS NULL ORDER BY STR_TO_DATE(Date, '%Y-%m-%d') ASC");
+    $date_query = $conn->query("SELECT DISTINCT Date FROM timesheet ORDER BY STR_TO_DATE(Date, '%Y-%m-%d') ASC");
     while ($row = $date_query->fetch_assoc()) {
         $date_options[] = $row['Date'];
     }
@@ -113,7 +100,7 @@ if ($show_table) {
 
 if ($show_table) {
     // Build the base query with optional search filters
-    $where_clauses = ["deleted_at IS NULL"]; // Always exclude soft-deleted records
+    $where_clauses = [];
     $params = [];
     $types = "";
 
@@ -143,7 +130,7 @@ if ($show_table) {
         $types .= "s";
     }
 
-    $where_sql = "WHERE " . implode(" AND ", $where_clauses);
+    $where_sql = !empty($where_clauses) ? "WHERE " . implode(" AND ", $where_clauses) : "";
 
     // Get total rows for pagination (filtered)
     $total_query = "SELECT COUNT(*) as total FROM timesheet $where_sql";
@@ -732,14 +719,6 @@ if ($show_table) {
 
                 <div style="text-align: center; padding: 1rem; color: white; opacity: 0.8;">
                     <i class="fas fa-table icon"></i>Showing all <?php echo $total_rows; ?> records
-                </div>
-
-                <!-- Soft Delete Button -->
-                <div style="text-align: center; padding: 1rem; margin-top: 1rem;">
-                    <button onclick="return confirm('Are you sure you want to soft delete all records? This will mark them as deleted but keep them in the database.') && (window.location.href='?soft_delete_all=1')" 
-                            style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 12px; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); transition: all 0.3s ease;">
-                        <i class="fas fa-archive icon"></i>Soft Delete All Records
-                    </button>
                 </div>
             <?php endif; ?>
         </section>
