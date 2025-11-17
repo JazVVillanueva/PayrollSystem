@@ -1,0 +1,36 @@
+TO: jaz_villanueva@dlsu.edu.ph
+SUBJECT: Payslip for Murdock, Matthew - Period: 2025-01-03 to 2025-01-30
+DATE: 2025-11-17 18:36:07
+==========================================
+
+Dear HR/Payroll Department,
+
+Please find the payslip details for Murdock, Matthew below:
+
+==============================================
+PAYSLIP SUMMARY
+==============================================
+
+Employee: Murdock, Matthew
+Payroll Period: 2025-01-03 to 2025-01-30
+
+----------------------------------------------
+WORK SUMMARY
+----------------------------------------------
+Days Worked: 20 days
+Daily Rate: PHP 520.00
+Basic Pay: PHP 10,400.00
+Overtime Hours: 4.0 hrs
+
+----------------------------------------------
+NET INCOME (Take Home Pay)
+----------------------------------------------
+PHP 11,416.00
+
+==============================================
+
+This payslip has been generated from the PayrollSystem.
+Net income amount is verified against Excel payroll data.
+
+Best regards,
+Payroll System

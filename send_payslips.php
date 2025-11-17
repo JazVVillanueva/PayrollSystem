@@ -2,6 +2,14 @@
 session_start();
 include 'db_connect.php';
 
+// Include PHPMailer
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require 'PHPMailer/src/Exception.php';
+require 'PHPMailer/src/PHPMailer.php';
+require 'PHPMailer/src/SMTP.php';
+
 $start_date = isset($_POST['start_date']) ? $_POST['start_date'] : '2025-01-03';
 $end_date = isset($_POST['end_date']) ? $_POST['end_date'] : '2025-01-30';
 $selected_employee = isset($_POST['employee']) ? $_POST['employee'] : '';
@@ -115,30 +123,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
     $email_body .= "Best regards,\n";
     $email_body .= "Payroll System\n";
 
-    // Email headers
-    $headers = "From: payroll@company.com\r\n";
-    $headers .= "Reply-To: payroll@company.com\r\n";
-    $headers .= "X-Mailer: PHP/" . phpversion();
+    // Send email using PHPMailer
+    $mail = new PHPMailer(true);
+    
+    try {
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'your.email@gmail.com';  // Replace with actual Gmail
+        $mail->Password   = 'your-app-password';      // Replace with Gmail App Password
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = 587;
 
-    // Configure SMTP for Gmail (alternative to php.ini configuration)
-    ini_set("SMTP", "smtp.gmail.com");
-    ini_set("smtp_port", "587");
-    
-    // Try to send email
-    $mail_sent = false;
-    
-    // Check if mail function is available
-    if (function_exists('mail')) {
-        // Suppress warning and try to send
-        $mail_sent = @mail($to_email, $subject, $email_body, $headers);
-    }
-    
-    if ($mail_sent) {
-        $message = "Payslip successfully sent to $to_email!";
+        // Recipients
+        $mail->setFrom('payroll@company.com', 'Payroll System');
+        $mail->addAddress($to_email);
+
+        // Content
+        $mail->isHTML(false);
+        $mail->Subject = $subject;
+        $mail->Body    = $email_body;
+
+        $mail->send();
+        $message = "✓ Payslip successfully sent to $to_email!";
         $message_type = 'success';
-    } else {
-        // For XAMPP/local development, we need a proper mail library
-        // Let's create a simple file-based email log as a workaround
+        
+    } catch (Exception $e) {
+        // If sending fails, log to file as fallback
         $log_dir = __DIR__ . '/email_logs';
         if (!file_exists($log_dir)) {
             mkdir($log_dir, 0777, true);
@@ -146,23 +158,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
         
         $log_file = $log_dir . '/payslip_' . date('Y-m-d_His') . '_' . str_replace([' ', ','], '_', $selected_employee) . '.txt';
         $log_content = "TO: $to_email\n";
-        $log_content .= "SUBJECT: $subject\n";
+        $log_content = "SUBJECT: $subject\n";
         $log_content .= "DATE: " . date('Y-m-d H:i:s') . "\n";
+        $log_content .= "ERROR: " . $mail->ErrorInfo . "\n";
         $log_content .= "==========================================\n\n";
         $log_content .= $email_body;
         
         file_put_contents($log_file, $log_content);
         
-        $message = "✓ Payslip prepared for $selected_employee! Email logged to: email_logs folder. ";
-        $message .= "To send real emails, you need to configure SMTP in XAMPP or use a service like SendGrid/Mailgun.";
-        $message_type = 'success';
+        $message = "⚠ Email not sent. Gmail credentials need to be configured in send_payslips.php (lines 103-104). ";
+        $message .= "Payslip saved to: email_logs/" . basename($log_file);
+        $message_type = 'warning';
         
-        // Store email preview for display
+        // Store email preview
         $_SESSION['email_preview'] = [
             'to' => $to_email,
             'subject' => $subject,
             'body' => $email_body,
-            'log_file' => basename($log_file)
+            'log_file' => basename($log_file),
+            'error' => $mail->ErrorInfo
         ];
     }
 }
@@ -523,12 +537,14 @@ $conn->close();
                     </div>
                 </div>
                 <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
-                    <strong><i class="fas fa-tools"></i> Need Real Email Delivery?</strong><br>
+                    <strong><i class="fas fa-cog"></i> Setup Required for Real Email Sending:</strong><br>
                     <p style="margin-top: 8px; font-size: 0.9rem;">
-                        For actual email sending, configure SMTP in XAMPP:<br>
-                        • Install <strong>sendmail</strong> or use Gmail SMTP<br>
-                        • Or deploy to a production server with email service<br>
-                        • Currently: emails are logged to <code>email_logs/</code> folder
+                        <strong>To enable actual email delivery:</strong><br>
+                        1. Open <code>send_payslips.php</code><br>
+                        2. Edit line 103: Replace <code>'your.email@gmail.com'</code> with your Gmail<br>
+                        3. Edit line 104: Replace <code>'your-app-password'</code> with Gmail App Password<br>
+                        4. <a href="https://support.google.com/accounts/answer/185833" target="_blank" style="color: #007bff;">Get Gmail App Password here</a><br>
+                        <strong>Without setup:</strong> Emails are saved to <code>email_logs/</code> folder
                     </p>
                 </div>
             </div>
