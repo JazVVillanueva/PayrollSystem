@@ -68,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $processed_holidays = [];
         $dayBuckets = [];
         $seen_rows = [];  // Track seen rows to skip duplicates
+        $daily_earnings_tracker = []; // Track all earnings per date: [date => ['basic'=>, 'ot'=>, 'night'=>, etc]]
         
 
         while ($row = $result->fetch_assoc()) {
@@ -81,6 +82,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $deductions = $row['Deductions'];
             $dept_row = $row['Business_Unit'] ?? '';
             $shift_no = isset($row['Shift_No']) ? (int)$row['Shift_No'] : 0;
+            
+            // Initialize daily earnings tracker for this date
+            if (!isset($daily_earnings[$date])) {
+                $daily_earnings[$date] = 0;
+            }
 
             // Skip duplicate rows (same date, time_in, time_out, hours, remarks)
             $row_key = $date . '|' . $row['Time_IN'] . '|' . $row['Time_OUT'] . '|' . $hours . '|' . $remarks;
@@ -199,12 +205,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cashier_pay = $total_cashier_bonus;
         $subtotal = $basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay + $sil_pay + $cashier_pay;
         
-        // Allowance: 20php if total daily pay > 520 (after basic + bonuses)
-        if ($subtotal > 520) {
-            $total_allowance = 20;
+        // Allowance: 20php per day where employee's rate > 520 (employees earning more than 520PhP per day)
+        if ($daily_rate > 520) {
+            $total_allowance = 20 * $total_days_worked;
         }
         
-        // Special case: Murdock, Matthew gets 80 allowance instead of 20
+        // Special case: Murdock, Matthew gets 80 allowance (manually set from Excel)
         if ($employee === 'Murdock, Matthew' || $employee === 'Murdock, Mathew') {
             $total_allowance = 80;
         }
