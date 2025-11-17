@@ -48,7 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
         $holiday_dates = [
-        '2025-01-29' => 0.30 // Chinese New Year: Special Non-Working (+30%)
+            '2025-01-06' => 1.00, // Three Kings Day: Regular Holiday (+100%)
+            '2025-01-29' => 0.30  // Chinese New Year: Special Non-Working (+30%)
         ];
 
 
@@ -68,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $processed_holidays = [];
         $dayBuckets = [];
         $seen_rows = [];  // Track seen rows to skip duplicates
-        $daily_earnings = []; // Track total earnings per date to calculate allowance: [date => total_earnings]
+        $daily_earnings = []; // Track earnings per date: [date => ['basic'=>, 'ot'=>, 'night'=>, 'holiday'=>, 'cashier'=>]]
         
 
         while ($row = $result->fetch_assoc()) {
@@ -83,11 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $dept_row = $row['Business_Unit'] ?? '';
             $shift_no = isset($row['Shift_No']) ? (int)$row['Shift_No'] : 0;
             
-            // Initialize daily earnings tracker for this date
-            if (!isset($daily_earnings[$date])) {
-                $daily_earnings[$date] = 0;
-            }
-
             // Initialize daily earnings tracker for this date
             if (!isset($daily_earnings[$date])) {
                 $daily_earnings[$date] = ['basic' => 0, 'ot' => 0, 'night' => 0, 'holiday' => 0, 'cashier' => 0];
@@ -117,6 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dayBuckets[$date]['base'] += $hours;
     }
 
+            // Track days worked (SIL days are NOT counted in days_worked, they get SIL pay instead)
             $has_sil = stripos($short_misload_bonus_sil, 'SIL') !== false;
             if (!$has_sil && !in_array($date, $processed_dates)) {
                 $total_days_worked++;
@@ -192,11 +189,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Add SIL to night differential: Each SIL counts as 52 PHP night diff
         $total_night_diff += $total_sil_count * 52;
-
-        // Add Three Kings Day premium to all employees if in range (even if not worked)
-        if ($start_date <= '2025-01-05' && $end_date >= '2025-01-05') {
-            $total_holiday_premium += $daily_rate * 1.00; // +520 PHP
-        }
 
         // Standard Deductions (if not exempt)
         if (!in_array($employee, $exempt_employees)) {
