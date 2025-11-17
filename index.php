@@ -80,7 +80,7 @@ if (isset($_GET['clear_timesheet'])) {
 // Automatically show table if data exists (no need for ?show_timesheet=1)
 $records = null;
 $show_table = false;
-$rows_per_page = 10; // Adjust as needed
+$rows_per_page = 30; // Increased to show more rows per page
 $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($current_page - 1) * $rows_per_page;
 
@@ -250,7 +250,7 @@ if ($show_table) {
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 95%;
             margin: 0 auto;
             padding: 2rem;
         }
@@ -402,6 +402,7 @@ if ($show_table) {
         
         .table-wrapper {
             overflow-x: auto;
+            margin-top: 1rem;
         }
         
         table {
@@ -409,12 +410,14 @@ if ($show_table) {
             border-collapse: separate;
             border-spacing: 0;
             margin-top: 1rem;
+            font-size: 0.9rem;
         }
         
         th, td {
-            padding: 1rem;
+            padding: 0.75rem 0.5rem;
             text-align: left;
             border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
         }
         
         th {
@@ -700,11 +703,43 @@ if ($show_table) {
                     <?php if ($current_page > 1): ?>
                         <a href="?page=<?php echo $current_page - 1; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>"><button>Previous</button></a>
                     <?php endif; ?>
-                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <?php 
+                    // Limit to showing max 3 page numbers
+                    $max_pages_to_show = 3;
+                    if ($total_pages <= $max_pages_to_show) {
+                        // Show all pages if total is 3 or less
+                        for ($i = 1; $i <= $total_pages; $i++):
+                    ?>
                         <a href="?page=<?php echo $i; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>">
                             <button <?php if ($i == $current_page) echo 'class="active"'; ?>><?php echo $i; ?></button>
                         </a>
-                    <?php endfor; ?>
+                    <?php 
+                        endfor;
+                    } else {
+                        // Show current page and surrounding pages, max 3
+                        $start_page = max(1, $current_page - 1);
+                        $end_page = min($total_pages, $start_page + $max_pages_to_show - 1);
+                        
+                        // Adjust if we're near the end
+                        if ($end_page - $start_page < $max_pages_to_show - 1) {
+                            $start_page = max(1, $end_page - $max_pages_to_show + 1);
+                        }
+                        
+                        for ($i = $start_page; $i <= $end_page; $i++):
+                    ?>
+                        <a href="?page=<?php echo $i; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>">
+                            <button <?php if ($i == $current_page) echo 'class="active"'; ?>><?php echo $i; ?></button>
+                        </a>
+                    <?php 
+                        endfor;
+                        
+                        // Show total pages info
+                        if ($total_pages > $max_pages_to_show): ?>
+                            <span style="padding: 0.5rem 1rem; color: white;">of <?php echo $total_pages; ?></span>
+                    <?php 
+                        endif;
+                    }
+                    ?>
                     <?php if ($current_page < $total_pages): ?>
                         <a href="?page=<?php echo $current_page + 1; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>"><button>Next</button></a>
                     <?php endif; ?>
