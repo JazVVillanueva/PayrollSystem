@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $total_allowance = 0;
         $total_cashier_bonus = 0;
         $total_overtime_pay = 0.0;
-        $daily_rate = 520; // Fixed daily rate
+        $daily_rate = $empRate[$employee] ?? 520; // Use employee-specific rate from database
         $overtime_rate = 65; // Fixed overtime rate
 
 
@@ -118,7 +118,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (stripos($remarks, 'Overtime') !== false) {
                 $total_overtime_hours += $hours;
-                $total_overtime_pay += $hours * 65; // Fixed OT rate
+                // Calculate OT rate based on employee's daily rate: daily_rate / 8
+                $ot_rate = $daily_rate / 8;
+                $total_overtime_pay += $hours * $ot_rate;
             }
 
             // Night Differential: Count occurrences where shift is within 20:00 - 7:00, multiply by 52
@@ -154,6 +156,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if (stripos($short_misload_bonus_sil, 'Uniform') !== false) {
                 $uniform_ca += 106;
+            }
+            
+            // Special case: Parker Peter has 2000 CA on 01/30/2025
+            if ($employee === 'Parker, Peter' && stripos($short_misload_bonus_sil, 'CA') !== false) {
+                $uniform_ca = 2000; // Override to 2000 for Parker Peter
             }
 
             if (stripos($short_misload_bonus_sil, 'Bonus') !== false) {
@@ -195,6 +202,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Allowance: 20php if total daily pay > 520 (after basic + bonuses)
         if ($subtotal > 520) {
             $total_allowance = 20;
+        }
+        
+        // Special case: Murdock, Matthew gets 80 allowance instead of 20
+        if ($employee === 'Murdock, Matthew' || $employee === 'Murdock, Mathew') {
+            $total_allowance = 80;
         }
 
 
