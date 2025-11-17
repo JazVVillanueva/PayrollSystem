@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $total_holiday_premium = 0;
         $total_sil_count = 0;
         $total_allowance = 0;
-        $total_cashier_bonus = 0;
+        $total_cashier_hours = 0;
         $total_overtime_pay = 0.0;
         $daily_rate    = $empRate[$employee] ?? 520.0;   // fallback 520 if missing
         $regular_hours = 8;
@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             
             if ($role === 'Cashier') {
-                $total_cashier_bonus += 40 * floor($hours / 8);
+                $total_cashier_hours += $hours;
             }
 
             if (stripos($remarks, 'Late') !== false) {
@@ -187,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $night_diff_pay = $total_night_diff;
         $holiday_pay = $total_holiday_premium;
         $sil_pay = $total_sil_count * $daily_rate;
-        $cashier_pay = $total_cashier_bonus;
+        $cashier_pay = floor($total_cashier_hours / 8) * 40;
         $subtotal = $basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay + $sil_pay + $cashier_pay;
         
         // Calculate allowance based on days with regular (non-OT) work only
