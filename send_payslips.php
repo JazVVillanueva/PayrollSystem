@@ -127,10 +127,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
     $mail = new PHPMailer(true);
     
     try {
-        // For development: Just log and confirm (no actual SMTP needed)
-        // In production: Configure with company email SMTP
+        // PRODUCTION MODE - Actually send emails
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'jaz_villanueva@dlsu.edu.ph';
+        $mail->Password   = 'xnct onkb nstf mwua';  // App password
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = 587;
+        $mail->SMTPDebug  = 0; // Set to 2 for debugging
+
+        // Recipients
+        $mail->setFrom('jaz_villanueva@dlsu.edu.ph', 'Payroll System');
+        $mail->addAddress($to_email);
+
+        // Content
+        $mail->isHTML(false);
+        $mail->Subject = $subject;
+        $mail->Body    = $email_body;
+
+        $mail->send();
         
-        // Simulate successful send for development
+        // Also log for records
         $log_dir = __DIR__ . '/email_logs';
         if (!file_exists($log_dir)) {
             mkdir($log_dir, 0777, true);
@@ -140,12 +158,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
         $log_content = "TO: $to_email\n";
         $log_content .= "SUBJECT: $subject\n";
         $log_content .= "DATE: " . date('Y-m-d H:i:s') . "\n";
+        $log_content .= "STATUS: EMAIL SENT SUCCESSFULLY\n";
         $log_content .= "==========================================\n\n";
         $log_content .= $email_body;
         
         file_put_contents($log_file, $log_content);
         
-        $message = "✓ Payslip prepared successfully for $selected_employee! Email ready to send to: $to_email";
+        $message = "✓ Payslip successfully SENT to $to_email! Check your inbox.";
         $message_type = 'success';
         
         // Store email preview
@@ -153,12 +172,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
             'to' => $to_email,
             'subject' => $subject,
             'body' => $email_body,
-            'log_file' => basename($log_file)
+            'log_file' => basename($log_file),
+            'sent' => true
         ];
         
     } catch (Exception $e) {
-        $message = "⚠ Error preparing payslip: " . $e->getMessage();
+        // Log error
+        $log_dir = __DIR__ . '/email_logs';
+        if (!file_exists($log_dir)) {
+            mkdir($log_dir, 0777, true);
+        }
+        
+        $log_file = $log_dir . '/payslip_ERROR_' . date('Y-m-d_His') . '_' . str_replace([' ', ','], '_', $selected_employee) . '.txt';
+        $log_content = "TO: $to_email\n";
+        $log_content .= "SUBJECT: $subject\n";
+        $log_content .= "DATE: " . date('Y-m-d H:i:s') . "\n";
+        $log_content .= "ERROR: " . $mail->ErrorInfo . "\n";
+        $log_content .= "==========================================\n\n";
+        $log_content .= $email_body;
+        
+        file_put_contents($log_file, $log_content);
+        
+        $message = "⚠ Failed to send email: " . $mail->ErrorInfo . " - Saved to: email_logs/" . basename($log_file);
         $message_type = 'error';
+        
+        $_SESSION['email_preview'] = [
+            'to' => $to_email,
+            'subject' => $subject,
+            'body' => $email_body,
+            'log_file' => basename($log_file),
+            'error' => $mail->ErrorInfo
+        ];
     }
 }
 
@@ -517,12 +561,13 @@ $conn->close();
                         <strong>Recipient Email:</strong> jaz_villanueva@dlsu.edu.ph
                     </div>
                 </div>
-                <div style="margin-top: 15px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
-                    <strong><i class="fas fa-info-circle"></i> Development Mode:</strong><br>
+                <div style="margin-top: 15px; padding: 15px; background: #d4edda; border-radius: 8px; border-left: 4px solid #28a745;">
+                    <strong><i class="fas fa-check-circle"></i> Production Mode - Active:</strong><br>
                     <p style="margin-top: 8px; font-size: 0.9rem;">
-                        Emails are currently logged to <code>email_logs/</code> folder for testing.<br>
-                        <strong>To enable actual email sending:</strong> A company email account with SMTP would be configured here.<br>
-                        <strong>How it works:</strong> HR uses their company email to send payslips → Employee receives at their email
+                        Emails are being sent LIVE via Gmail SMTP.<br>
+                        <strong>Status:</strong> Ready to send actual emails<br>
+                        <strong>Sender:</strong> jaz_villanueva@dlsu.edu.ph<br>
+                        <strong>Logs:</strong> All sent emails are also logged to <code>email_logs/</code> for records
                     </p>
                 </div>
             </div>
