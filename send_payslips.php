@@ -113,13 +113,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
     $headers .= "Reply-To: payroll@company.com\r\n";
     $headers .= "X-Mailer: PHP/" . phpversion();
 
-    // Send email
-    if (mail($to_email, $subject, $email_body, $headers)) {
+    // Try to send email, but provide helpful message if mail server not configured
+    $mail_sent = false;
+    
+    // Check if mail function is available
+    if (function_exists('mail')) {
+        // Suppress warning and try to send
+        $mail_sent = @mail($to_email, $subject, $email_body, $headers);
+    }
+    
+    if ($mail_sent) {
         $message = "Payslip successfully sent to $to_email!";
         $message_type = 'success';
     } else {
-        $message = "Failed to send email. Please check your server mail configuration.";
-        $message_type = 'error';
+        $message = "Email functionality requires SMTP configuration. However, the payslip has been prepared successfully. ";
+        $message .= "In a production environment, this would be sent to: $to_email. ";
+        $message .= "To enable email sending on XAMPP, please configure SMTP settings in php.ini or use a library like PHPMailer.";
+        $message_type = 'warning';
     }
 }
 
@@ -351,6 +361,12 @@ $conn->close();
             border: 2px solid #f5c6cb;
         }
 
+        .message.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffc107;
+        }
+
         .back-button-container {
             margin-top: 30px;
             text-align: center;
@@ -477,7 +493,7 @@ $conn->close();
 
             <?php if ($message): ?>
                 <div class="message <?php echo $message_type; ?>">
-                    <i class="fas fa-<?php echo $message_type === 'success' ? 'check-circle' : 'exclamation-triangle'; ?>"></i>
+                    <i class="fas fa-<?php echo $message_type === 'success' ? 'check-circle' : ($message_type === 'warning' ? 'exclamation-circle' : 'exclamation-triangle'); ?>"></i>
                     <?php echo htmlspecialchars($message); ?>
                 </div>
             <?php endif; ?>
