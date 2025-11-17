@@ -132,10 +132,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
         $mail->Username   = 'jaz_villanueva@dlsu.edu.ph';
-        $mail->Password   = 'xnct onkb nstf mwua';  // App password
+        $mail->Password   = 'xnctonkbnstfmwua';  // App password without spaces
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = 587;
-        $mail->SMTPDebug  = 0; // Set to 2 for debugging
+        $mail->SMTPDebug  = 0;
+        
+        // Additional options for DLSU email
+        $mail->SMTPOptions = array(
+            'ssl' => array(
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            )
+        );
 
         // Recipients
         $mail->setFrom('jaz_villanueva@dlsu.edu.ph', 'Payroll System');
