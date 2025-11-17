@@ -400,6 +400,15 @@ if ($show_table) {
             border-radius: 15px;
         }
         
+        .search-form > div {
+            position: relative;
+        }
+        
+        .search-form input[type="text"],
+        .search-form select {
+            width: 100%;
+        }
+        
         .table-wrapper {
             overflow-x: auto;
             margin-top: 1rem;
@@ -618,35 +627,50 @@ if ($show_table) {
             <?php else: ?>
                 <!-- Search Form -->
                 <form method="GET" class="search-form">
-                    <input type="text" name="search_name" placeholder="🔍 Search by Name" value="<?php echo htmlspecialchars($_GET['search_name'] ?? ''); ?>">
+                    <div style="position: relative;">
+                        <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #a0aec0;"></i>
+                        <input type="text" name="search_name" placeholder="Search by Name" value="<?php echo htmlspecialchars($_GET['search_name'] ?? ''); ?>" style="padding-left: 36px;">
+                    </div>
                     
-                    <select name="search_date">
-                        <option value="">📅 All Dates</option>
-                        <?php foreach ($date_options as $date): ?>
-                            <option value="<?php echo htmlspecialchars($date); ?>" <?php if (isset($_GET['search_date']) && $_GET['search_date'] === $date) echo 'selected'; ?>><?php echo htmlspecialchars($date); ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div style="position: relative;">
+                        <i class="far fa-calendar-alt" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #a0aec0; pointer-events: none; z-index: 1;"></i>
+                        <select name="search_date" style="padding-left: 36px;">
+                            <option value="">All Dates</option>
+                            <?php foreach ($date_options as $date): ?>
+                                <option value="<?php echo htmlspecialchars($date); ?>" <?php if (isset($_GET['search_date']) && $_GET['search_date'] === $date) echo 'selected'; ?>><?php echo htmlspecialchars($date); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     
-                    <select name="search_shift_no">
-                        <option value="">🌙 All Shifts</option>
-                        <option value="1" <?php if (isset($_GET['search_shift_no']) && $_GET['search_shift_no'] === '1') echo 'selected'; ?>>Shift 1</option>
-                        <option value="2" <?php if (isset($_GET['search_shift_no']) && $_GET['search_shift_no'] === '2') echo 'selected'; ?>>Shift 2</option>
-                        <option value="3" <?php if (isset($_GET['search_shift_no']) && $_GET['search_shift_no'] === '3') echo 'selected'; ?>>Shift 3</option>
-                    </select>
+                    <div style="position: relative;">
+                        <i class="fas fa-moon" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #a0aec0; pointer-events: none; z-index: 1;"></i>
+                        <select name="search_shift_no" style="padding-left: 36px;">
+                            <option value="">All Shifts</option>
+                            <option value="1" <?php if (isset($_GET['search_shift_no']) && $_GET['search_shift_no'] === '1') echo 'selected'; ?>>Shift 1</option>
+                            <option value="2" <?php if (isset($_GET['search_shift_no']) && $_GET['search_shift_no'] === '2') echo 'selected'; ?>>Shift 2</option>
+                            <option value="3" <?php if (isset($_GET['search_shift_no']) && $_GET['search_shift_no'] === '3') echo 'selected'; ?>>Shift 3</option>
+                        </select>
+                    </div>
                     
-                    <select name="search_business_unit">
-                        <option value="">🏢 All Units</option>
-                        <option value="Service Crew" <?php if (isset($_GET['search_business_unit']) && $_GET['search_business_unit'] === 'Service Crew') echo 'selected'; ?>>Service Crew</option>
-                        <option value="Canteen" <?php if (isset($_GET['search_business_unit']) && $_GET['search_business_unit'] === 'Canteen') echo 'selected'; ?>>Canteen</option>
-                        <option value="Satellite Office" <?php if (isset($_GET['search_business_unit']) && $_GET['search_business_unit'] === 'Satellite Office') echo 'selected'; ?>>Satellite Office</option>
-                        <option value="Main Office" <?php if (isset($_GET['search_business_unit']) && $_GET['search_business_unit'] === 'Main Office') echo 'selected'; ?>>Main Office</option>
-                    </select>
+                    <div style="position: relative;">
+                        <i class="fas fa-building" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #a0aec0; pointer-events: none; z-index: 1;"></i>
+                        <select name="search_business_unit" style="padding-left: 36px;">
+                            <option value="">All Units</option>
+                            <option value="Service Crew" <?php if (isset($_GET['search_business_unit']) && $_GET['search_business_unit'] === 'Service Crew') echo 'selected'; ?>>Service Crew</option>
+                            <option value="Canteen" <?php if (isset($_GET['search_business_unit']) && $_GET['search_business_unit'] === 'Canteen') echo 'selected'; ?>>Canteen</option>
+                            <option value="Satellite Office" <?php if (isset($_GET['search_business_unit']) && $_GET['search_business_unit'] === 'Satellite Office') echo 'selected'; ?>>Satellite Office</option>
+                            <option value="Main Office" <?php if (isset($_GET['search_business_unit']) && $_GET['search_business_unit'] === 'Main Office') echo 'selected'; ?>>Main Office</option>
+                        </select>
+                    </div>
                     
-                    <select name="search_role">
-                        <option value="">👤 All Roles</option>
-                        <option value="Crew" <?php if (isset($_GET['search_role']) && $_GET['search_role'] === 'Crew') echo 'selected'; ?>>Crew</option>
-                        <option value="Cashier" <?php if (isset($_GET['search_role']) && $_GET['search_role'] === 'Cashier') echo 'selected'; ?>>Cashier</option>
-                    </select>
+                    <div style="position: relative;">
+                        <i class="fas fa-user-tag" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #a0aec0; pointer-events: none; z-index: 1;"></i>
+                        <select name="search_role" style="padding-left: 36px;">
+                            <option value="">All Roles</option>
+                            <option value="Crew" <?php if (isset($_GET['search_role']) && $_GET['search_role'] === 'Crew') echo 'selected'; ?>>Crew</option>
+                            <option value="Cashier" <?php if (isset($_GET['search_role']) && $_GET['search_role'] === 'Cashier') echo 'selected'; ?>>Cashier</option>
+                        </select>
+                    </div>
                     
                     <button type="submit"><i class="fas fa-search icon"></i>Search</button>
                     <a href="index.php" style="text-decoration: none;"><button type="button"><i class="fas fa-redo icon"></i>Clear</button></a>
