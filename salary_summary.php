@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $total_holiday_premium = 0;
         $total_sil_count = 0;
         $total_allowance = 0;
-        $total_cashier_hours = 0;
+        $total_cashier_bonus = 0;
         $total_overtime_pay = 0.0;
         $daily_rate = 520; // Fixed daily rate
         $overtime_rate = 65; // Fixed overtime rate
@@ -121,22 +121,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $total_overtime_pay += $hours * 65; // Fixed OT rate
             }
 
-            // Night differential: 3rd shift only (Shift_No = 3)
-            if ($shift_no == 3) {
-                $total_night_diff += 52;
+            // Night Differential: Count occurrences where shift is within 20:00 - 7:00, multiply by 52
+            $night_start = strtotime('20:00');
+            $night_end = strtotime('07:00') + 86400; // Next day
+            if ($time_in >= $night_start && $time_out <= $night_end) {
+                $total_night_diff += 52; // Add 52 per occurrence
             }
 
-            // Holiday premium for regular (non-overtime) work
-            if (!in_array($date, $processed_holidays) && $is_holiday && !$is_ot) {
+            // Holiday premium: Add only once per unique holiday date (for worked holidays)
+            if (!in_array($date, $processed_holidays) && $is_holiday) {
                 $total_holiday_premium += $daily_rate * $holiday_multiplier;
                 $processed_holidays[] = $date;
             }
 
             $total_sil_count += substr_count($short_misload_bonus_sil, 'SIL');
 
-            
+            // Cashier Bonus: 40php per 8hrs if Role is Cashier
             if ($role === 'Cashier') {
-                $total_cashier_hours += $hours;
+                $total_cashier_bonus += 40 * floor($hours / 8);
             }
 
             if (stripos($remarks, 'Late') !== false) {
@@ -155,10 +157,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (stripos($short_misload_bonus_sil, 'Bonus') !== false) {
-                // Extract numeric value from deductions column if it contains a number
-                if (!empty($deductions) && is_numeric($deductions)) {
-                    $bonuses += (float)$deductions;
-                }
+                // Bonuses: "Bonus" in Short/Misload/Bonus/SIL (add to NET income)
+                $bonuses += 0; // Adjust if you have specific bonus amounts
             }
         }
 
@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $night_diff_pay = $total_night_diff;
         $holiday_pay = $total_holiday_premium;
         $sil_pay = $total_sil_count * $daily_rate;
-        $cashier_pay = floor($total_cashier_hours / 8) * 40;
+        $cashier_pay = $total_cashier_bonus;
         $subtotal = $basic_pay + $overtime_pay + $night_diff_pay + $holiday_pay + $sil_pay + $cashier_pay;
         
         // Allowance: 20php if total daily pay > 520 (after basic + bonuses)
