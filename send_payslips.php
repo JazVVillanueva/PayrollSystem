@@ -555,12 +555,6 @@ $conn->close();
                     <li>Days worked and overtime hours</li>
                     <li>Net income (verified against Excel data)</li>
                 </ul>
-                <div class="email-info">
-                    <i class="fas fa-at"></i>
-                    <div>
-                        <strong>Recipient Email:</strong> jaz_villanueva@dlsu.edu.ph
-                    </div>
-                </div>
                 <div style="margin-top: 15px; padding: 15px; background: #d4edda; border-radius: 8px; border-left: 4px solid #28a745;">
                     <strong><i class="fas fa-check-circle"></i> Production Mode - Active:</strong><br>
                     <p style="margin-top: 8px; font-size: 0.9rem;">
