@@ -136,7 +136,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
     // Generate PDF using FPDF
     require('fpdf.php');
     
-    $pdf = new FPDF();
+    // Create PDF with explicit settings
+    $pdf = new FPDF('P', 'mm', 'A4');
+    $pdf->SetAutoPageBreak(true, 15);
     $pdf->AddPage();
     
     // Header
