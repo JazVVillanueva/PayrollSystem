@@ -131,8 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($selected_employee)) {
         $mail->isSMTP();
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = 'your.email@gmail.com';  // Replace with actual Gmail
-        $mail->Password   = 'your-app-password';      // Replace with Gmail App Password
+        $mail->Username   = 'jaz_villanueva@dlsu.edu.ph';  // Your DLSU Gmail
+        $mail->Password   = 'your-app-password-here';      // Replace with Gmail App Password from https://myaccount.google.com/apppasswords
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = 587;
 
