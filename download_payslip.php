@@ -178,51 +178,344 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Download Payslip</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Download Payslip - CSV Export</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-        form { margin-bottom: 20px; }
-        select, input { padding: 8px; margin: 5px; }
-        button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
-        .message { margin-top: 20px; padding: 10px; background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .back-button { margin-top: 20px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .info-banner {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .info-banner h3 {
+            color: #667eea;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-banner ul {
+            margin-left: 20px;
+            color: #495057;
+        }
+
+        .info-banner li {
+            margin: 5px 0;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .form-section h2 {
+            color: #495057;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #495057;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .back-button-container {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .feature-card i {
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .feature-card h4 {
+            color: #495057;
+            margin-bottom: 8px;
+        }
+
+        .feature-card p {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .form-section {
+                padding: 20px;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Download Payslip</h1>
-    <form method="POST">
-        <label for="start_date">Start Date:</label>
-        <input type="date" id="start_date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>" required>
-        
-        <label for="end_date">End Date:</label>
-        <input type="date" id="end_date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>" required>
-        
-        <label for="employee">Select Employee:</label>
-        <select id="employee" name="employee" required>
-            <option value="">-- Select Employee --</option>
-            <?php
-            include 'db_connect.php';
-            $employee_query = $conn->query("SELECT DISTINCT Name FROM timesheet ORDER BY Name ASC");
-            while ($row = $employee_query->fetch_assoc()) {
-                echo '<option value="' . htmlspecialchars($row['Name']) . '">' . htmlspecialchars($row['Name']) . '</option>';
-            }
-            $conn->close();
-            ?>
-        </select>
-        
-        <button type="submit">Download Payslip</button>
-    </form>
-
-    <?php if ($message): ?>
-        <div class="message">
-            <?php echo htmlspecialchars($message); ?>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-file-download"></i> Download Payslip</h1>
+            <p>Export employee payslip data to CSV format</p>
         </div>
-    <?php endif; ?>
 
-    <div class="back-button">
-        <button onclick="location.href='index.php'">Back to Dashboard</button>
+        <div class="content">
+            <div class="info-banner">
+                <h3><i class="fas fa-info-circle"></i> What You'll Get</h3>
+                <ul>
+                    <li><strong>CSV File Format:</strong> Compatible with Excel, Google Sheets, and other spreadsheet applications</li>
+                    <li><strong>Complete Breakdown:</strong> Days worked, overtime, allowances, deductions, and net income</li>
+                    <li><strong>Ready to Use:</strong> Formatted and ready for record-keeping or further analysis</li>
+                </ul>
+            </div>
+
+            <div class="form-section">
+                <h2><i class="fas fa-cog"></i> Select Payslip Details</h2>
+                <form method="POST">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="start_date"><i class="fas fa-calendar-alt"></i> Start Date:</label>
+                            <input type="date" id="start_date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="end_date"><i class="fas fa-calendar-check"></i> End Date:</label>
+                            <input type="date" id="end_date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="employee"><i class="fas fa-user"></i> Select Employee:</label>
+                            <select id="employee" name="employee" required>
+                                <option value="">-- Select Employee --</option>
+                                <?php
+                                include 'db_connect.php';
+                                $employee_query = $conn->query("SELECT DISTINCT Name FROM timesheet ORDER BY Name ASC");
+                                while ($row = $employee_query->fetch_assoc()) {
+                                    echo '<option value="' . htmlspecialchars($row['Name']) . '">' . htmlspecialchars($row['Name']) . '</option>';
+                                }
+                                $conn->close();
+                                ?>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-download"></i> Download CSV Payslip
+                    </button>
+                </form>
+            </div>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <i class="fas fa-file-csv"></i>
+                    <h4>CSV Format</h4>
+                    <p>Universal format compatible with all spreadsheet apps</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h4>Detailed Breakdown</h4>
+                    <p>All earnings and deductions included</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h4>Secure Export</h4>
+                    <p>Direct download with no data storage</p>
+                </div>
+            </div>
+
+            <?php if ($message): ?>
+                <div class="message success">
+                    <i class="fas fa-check-circle"></i>
+                    <?php echo htmlspecialchars($message); ?>
+                </div>
+            <?php endif; ?>
+
+            <div class="back-button-container">
+                <button onclick="location.href='index.php'" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </button>
+            </div>
+        </div>
     </div>
 </body>
 </html>
