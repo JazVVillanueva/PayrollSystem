@@ -180,68 +180,81 @@ if ($show_table) {
             color: #1a202c;
         }
         .dark-mode {
-            background-color: #121212;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
             color: #ffffff;
         }
+        
+        /* Dark mode for cards and sections */
+        .dark-mode header,
+        .dark-mode section,
+        .dark-mode .form-card,
+        .dark-mode .table-card {
+            background: rgba(30, 30, 46, 0.95) !important;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+        
+        .dark-mode h1, 
+        .dark-mode h2,
+        .dark-mode h3,
+        .dark-mode label {
+            color: #e0e0e0 !important;
+        }
+        
         /* Dark mode for forms and inputs */
-        .dark-mode input, .dark-mode select, .dark-mode button {
-            background-color: #333333;
-            color: #ffffff;
-            border: 1px solid #555555;
+        .dark-mode input, 
+        .dark-mode select, 
+        .dark-mode textarea {
+            background-color: rgba(50, 50, 70, 0.8) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(102, 126, 234, 0.3) !important;
         }
+        
         .dark-mode input::placeholder {
-            color: #cccccc;
+            color: #a0a0a0 !important;
         }
+        
+        .dark-mode input:focus,
+        .dark-mode select:focus {
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+        }
+        
         /* Dark mode for table */
         .dark-mode table {
-            background-color: #1e1e1e;
+            background-color: rgba(30, 30, 46, 0.95) !important;
             color: #ffffff;
         }
-        .dark-mode th, .dark-mode td {
-            border-color: #555555;
-        }
+        
         .dark-mode th {
-            background-color: #333333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+            border-color: rgba(102, 126, 234, 0.3);
         }
+        
+        .dark-mode td {
+            border-color: rgba(102, 126, 234, 0.2);
+            color: #e0e0e0;
+        }
+        
+        .dark-mode tbody tr:hover {
+            background-color: rgba(102, 126, 234, 0.1) !important;
+        }
+        
         /* Dark mode for alerts */
         .dark-mode .alert {
-            background-color: #333333;
+            background-color: rgba(50, 50, 70, 0.9) !important;
             color: #ffffff;
-            border-color: #555555;
+            border: 1px solid rgba(102, 126, 234, 0.3);
         }
+        
         .dark-mode .alert.success {
-            background-color: #4caf50;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%) !important;
             color: #ffffff;
         }
+        
         .dark-mode .alert.error {
-            background-color: #f44336;
+            background: linear-gradient(135deg, #f56565 0%, #c53030 100%) !important;
             color: #ffffff;
-        }
-        /* Dark mode for links */
-        .dark-mode a {
-            color: #4fc3f7;
-        }
-        .dark-mode a:hover {
-            color: #81d4fa;
-        }
-        /* Other elements (e.g., headers, sections) */
-        .dark-mode h1, .dark-mode h2 {
-            color: #ffffff;
-        }
-        /* Ensure buttons and toggles are visible */
-        button {
-            background-color: #007bff;
-            color: #ffffff;
-            border: none;
-            padding: 10px 15px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        .dark-mode button {
-            background-color: #0056b3;
-        }
-        button:hover {
-            background-color: #0056b3;
         }
         
         .container {
